@@ -1,0 +1,1091 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bash Scripting in a Nutshell – Engineer Edition</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { darkMode:'class', theme:{ extend:{ fontFamily:{
+    mono:['JetBrains Mono','Fira Code','monospace'],
+    sans:['Inter','system-ui','sans-serif']
+  }}}}
+</script>
+<style>
+:root {
+  --bg-primary:    #04080e;
+  --bg-card:       #0a1220;
+  --bg-card-hover: #0e1928;
+  --border-subtle: rgba(255,255,255,0.07);
+  --text-primary:  #dce8f8;
+  --text-secondary:#6e88a8;
+  --text-muted:    #3c5068;
+  /* Bash palette — green terminal primary, amber accent, violet builtins */
+  --c-primary:   #22c55e;
+  --c-secondary: #f59e0b;
+  --c-accent:    #a78bfa;
+  --c-mac:       #2dd4bf;
+  --c-kpi:       #facc15;
+  --c-warn:      #f87171;
+  --c-proc:      #fb923c;
+  --c-blue:      #60a5fa;
+}
+.light {
+  --bg-primary:    #f0f7f0;
+  --bg-card:       #ffffff;
+  --bg-card-hover: #f4fff4;
+  --border-subtle: rgba(0,0,0,0.08);
+  --text-primary:  #0a1a0a;
+  --text-secondary:#3a5a3a;
+  --text-muted:    #8aaa8a;
+}
+* { box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body {
+  background:var(--bg-primary); color:var(--text-primary);
+  font-family:'Inter',system-ui,sans-serif;
+  line-height:1.6; transition:background 0.3s,color 0.3s;
+}
+::-webkit-scrollbar { width:5px; }
+::-webkit-scrollbar-track { background:var(--bg-primary); }
+::-webkit-scrollbar-thumb { background:#0a2010; border-radius:10px; }
+.card {
+  background:var(--bg-card); border:1px solid var(--border-subtle);
+  border-radius:12px; transition:all 0.25s ease;
+}
+.card:hover { background:var(--bg-card-hover); transform:translateY(-2px); }
+.badge {
+  display:inline-block; font-family:'JetBrains Mono',monospace;
+  font-size:0.67rem; font-weight:700; letter-spacing:0.04em;
+  padding:2px 8px; border-radius:4px;
+}
+.reveal { opacity:0; transform:translateY(20px); transition:opacity 0.55s ease,transform 0.55s ease; }
+.reveal.visible { opacity:1; transform:translateY(0); }
+.sec-num {
+  font-family:'JetBrains Mono',monospace; font-size:0.63rem;
+  color:var(--text-muted); letter-spacing:0.15em; text-transform:uppercase;
+}
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(34,197,94,0.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(34,197,94,0.04) 1px,transparent 1px);
+  background-size:44px 44px;
+}
+[data-tip] { position:relative; cursor:help; }
+[data-tip]::after {
+  content:attr(data-tip); position:absolute; bottom:calc(100% + 6px);
+  left:50%; transform:translateX(-50%); background:#050e05;
+  color:#dce8f8; border:1px solid rgba(34,197,94,0.3);
+  padding:5px 10px; border-radius:5px; font-size:0.7rem;
+  white-space:nowrap; opacity:0; pointer-events:none;
+  transition:opacity 0.2s; z-index:100; font-family:'Inter',sans-serif;
+}
+[data-tip]:hover::after { opacity:1; }
+#toc-panel {
+  position:fixed; left:18px; top:50%; transform:translateY(-50%);
+  z-index:50; display:flex; flex-direction:column; gap:8px;
+}
+.toc-dot {
+  width:8px; height:8px; border-radius:50%;
+  background:var(--text-muted); cursor:pointer; transition:all 0.2s; position:relative;
+}
+.toc-dot:hover,.toc-dot.active {
+  background:var(--c-primary); transform:scale(1.5);
+  box-shadow:0 0 8px rgba(34,197,94,0.65);
+}
+.toc-dot::after {
+  content:attr(data-label); position:absolute; left:18px; top:50%;
+  transform:translateY(-50%); white-space:nowrap; font-size:0.68rem;
+  color:var(--text-secondary); opacity:0; pointer-events:none;
+  transition:opacity 0.2s; background:var(--bg-card);
+  padding:2px 8px; border-radius:4px; border:1px solid var(--border-subtle); z-index:10;
+}
+.toc-dot:hover::after { opacity:1; }
+#theme-btn {
+  position:fixed; top:18px; right:18px; z-index:100;
+  background:var(--bg-card); border:1px solid var(--border-subtle);
+  color:var(--text-secondary); padding:7px 14px; border-radius:20px;
+  font-size:0.73rem; cursor:pointer; display:flex; align-items:center; gap:6px;
+  transition:all 0.2s;
+}
+#theme-btn:hover { border-color:var(--c-primary); color:var(--c-primary); }
+.layer-row {
+  display:flex; align-items:stretch; border-radius:8px;
+  overflow:hidden; border:1px solid var(--border-subtle); margin-bottom:6px;
+}
+.layer-label {
+  width:96px; flex-shrink:0; display:flex; align-items:center;
+  justify-content:center; font-family:'JetBrains Mono',monospace;
+  font-size:0.72rem; font-weight:700; letter-spacing:0.05em; padding:10px 8px; text-align:center;
+}
+.layer-content {
+  flex:1; padding:10px 14px; display:flex; align-items:center;
+  flex-wrap:wrap; gap:6px; font-size:0.78rem; color:var(--text-secondary);
+}
+.proc-step { display:flex; gap:12px; align-items:flex-start; padding:11px 0; border-bottom:1px solid var(--border-subtle); }
+.proc-step:last-child { border-bottom:none; }
+.step-num {
+  width:26px; height:26px; border-radius:50%; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'JetBrains Mono',monospace; font-size:0.7rem; font-weight:700;
+}
+.copy-btn {
+  position:absolute; top:10px; right:10px;
+  background:rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.25);
+  color:var(--c-primary); font-family:'JetBrains Mono',monospace;
+  font-size:0.65rem; padding:3px 8px; border-radius:4px;
+  cursor:pointer; transition:all 0.2s; z-index:5;
+}
+.copy-btn:hover { background:rgba(34,197,94,0.25); }
+.copy-btn.copied { color:#34d399; border-color:#34d399; background:rgba(52,211,153,0.12); }
+/* syntax highlighting colours */
+.cb {
+  font-family:'JetBrains Mono',monospace;
+  background:rgba(0,0,0,0.40);
+  border:1px solid rgba(34,197,94,0.14);
+  border-radius:8px; font-size:0.79rem;
+  padding:16px; line-height:1.9; position:relative;
+}
+.kw  { color:#86efac; }        /* keywords: if/then/for/while/do/done/fi/case */
+.bi  { color:#60a5fa; }        /* builtins: echo/read/export/source/declare */
+.va  { color:#fde68a; }        /* variables: $VAR $1 $# */
+.st  { color:#a5f3fc; }        /* strings */
+.cm  { color:#3d6040; font-style:italic; }  /* comments */
+.op  { color:#f59e0b; }        /* operators: && || ; | > >> < */
+.fn  { color:#c084fc; }        /* function names */
+.fl  { color:#f9a8d4; }        /* flags/options */
+.nm  { color:#fb923c; }        /* numbers */
+.pr  { color:#22c55e; }        /* prompt / path */
+@media (max-width:768px) { #toc-panel { display:none; } }
+@keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.4;} }
+</style>
+</head>
+<body>
+
+<button id="theme-btn" onclick="toggleTheme()">
+  <span id="theme-icon">☀️</span><span id="theme-label">Light</span>
+</button>
+
+<nav id="toc-panel" aria-label="Sections">
+  <div class="toc-dot active" data-label="Home"           onclick="ss('hero')"></div>
+  <div class="toc-dot"        data-label="Overview"       onclick="ss('s1')"></div>
+  <div class="toc-dot"        data-label="Script Anatomy" onclick="ss('s2')"></div>
+  <div class="toc-dot"        data-label="Core Syntax"    onclick="ss('s3')"></div>
+  <div class="toc-dot"        data-label="Data & Arrays"  onclick="ss('s4')"></div>
+  <div class="toc-dot"        data-label="Patterns"       onclick="ss('s5')"></div>
+  <div class="toc-dot"        data-label="Workflows"      onclick="ss('s6')"></div>
+  <div class="toc-dot"        data-label="Builtins"       onclick="ss('s7')"></div>
+  <div class="toc-dot"        data-label="Cheatsheet"     onclick="ss('s8')"></div>
+</nav>
+
+<!-- ═══════════ HERO ═══════════ -->
+<section id="hero" class="hero-grid min-h-screen flex flex-col items-center justify-center px-6 py-24 relative overflow-hidden">
+  <div style="position:absolute;top:5%;left:8%;width:520px;height:520px;background:radial-gradient(circle,rgba(34,197,94,0.07),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:8%;right:6%;width:380px;height:380px;background:radial-gradient(circle,rgba(245,158,11,0.06),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;top:45%;left:42%;width:560px;height:560px;background:radial-gradient(circle,rgba(167,139,250,0.04),transparent 65%);pointer-events:none;"></div>
+
+  <div class="text-center max-w-3xl relative z-10 reveal">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.25);border-radius:20px;padding:4px 16px;margin-bottom:24px;">
+      <span style="width:6px;height:6px;background:var(--c-primary);border-radius:50%;animation:pulse 2s infinite;"></span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-primary);letter-spacing:0.1em;">POSIX · GNU BASH 5 · ENGINEER EDITION</span>
+    </div>
+
+    <h1 style="font-size:clamp(2.4rem,7vw,4.4rem);font-weight:800;line-height:1.08;letter-spacing:-0.02em;margin-bottom:16px;">
+      <span style="color:var(--text-primary);">Bash</span>
+      <span style="background:linear-gradient(135deg,var(--c-primary),var(--c-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;"> Scripting</span><br>
+      <span style="color:var(--text-primary);">in a Nutshell</span>
+    </h1>
+    <p style="font-size:1rem;color:var(--text-secondary);max-width:640px;margin:0 auto 34px;">
+      A dense engineer's reference covering script anatomy, variables, control flow, functions, arrays, process substitution, traps, error handling patterns, and the full builtin vocabulary.
+    </p>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:30px;">
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--c-primary);">#!/bin/bash</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Shebang — interpreter declaration</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--c-secondary);">$?</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Exit code of last command</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--c-accent);">set -euo</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Strict mode — fail fast</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--c-kpi);">POSIX</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">IEEE 1003.1 shell standard</div>
+      </div>
+    </div>
+
+    <button onclick="ss('s1')" style="background:var(--c-primary);color:#000;font-weight:700;font-size:0.82rem;padding:10px 28px;border-radius:8px;border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;">EXPLORE FACTSHEET ↓</button>
+  </div>
+</section>
+
+<div style="max-width:960px;margin:0 auto;padding:0 20px;">
+
+<!-- ═══════════ S1 OVERVIEW ═══════════ -->
+<section id="s1" class="reveal" style="padding:64px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 01</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Overview — Bash at a Glance</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Bash (Bourne Again SHell) is the default shell on most Linux distros and macOS (≤10.14). It is simultaneously an interactive command interpreter and a full scripting language for automation, DevOps, and system administration.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div class="card" style="padding:22px;border-left:3px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">WHAT BASH IS</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:0.82rem;color:var(--text-secondary);">
+        <div><span class="badge" style="background:rgba(34,197,94,0.1);color:var(--c-primary);" data-tip="Reads and executes commands line by line">Interpreted</span> — no compile step; runs line-by-line in a subshell or interactive session</div>
+        <div><span class="badge" style="background:rgba(34,197,94,0.1);color:var(--c-primary);" data-tip="Extends POSIX sh with arrays, [[ ]], process substitution">POSIX superset</span> — portable core + Bash-specific extensions (arrays, <code style="color:var(--c-secondary);">[[ ]]</code>)</div>
+        <div><span class="badge" style="background:rgba(34,197,94,0.1);color:var(--c-primary);" data-tip="Every command is a child process (fork/exec)">Process-centric</span> — pipelines, subshells, coprocess, job control</div>
+        <div><span class="badge" style="background:rgba(34,197,94,0.1);color:var(--c-primary);" data-tip="Strings by default; no native int/float type">String-native</span> — all variables are strings; arithmetic via <code style="color:var(--c-secondary);">(( ))</code> or <code style="color:var(--c-secondary);">expr</code></div>
+      </div>
+    </div>
+    <div class="card" style="padding:22px;border-left:3px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">EXECUTION MODES</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:0.82rem;color:var(--text-secondary);">
+        <div><span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-secondary);">Interactive</span> — reads commands from terminal, has readline, history, tab completion</div>
+        <div><span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-secondary);">Non-interactive</span> — script file execution; <code style="color:var(--c-primary);">bash script.sh</code> or <code style="color:var(--c-primary);">./script.sh</code></div>
+        <div><span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-secondary);">Login shell</span> — sources <code style="color:var(--c-primary);">/etc/profile</code>, <code style="color:var(--c-primary);">~/.bash_profile</code> on start</div>
+        <div><span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-secondary);">Subshell</span> — <code style="color:var(--c-primary);">(cmd)</code> forks; variable changes don't affect parent</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">STRENGTHS</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.8;">File &amp; text manipulation &nbsp;·&nbsp; Process orchestration &nbsp;·&nbsp; Gluing CLI tools &nbsp;·&nbsp; CI/CD pipelines &nbsp;·&nbsp; System bootstrapping &nbsp;·&nbsp; Cron automation</div>
+    </div>
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">WHEN TO SWITCH LANGUAGES</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.8;">Data structures → Python &nbsp;·&nbsp; Performance loops → C/Rust &nbsp;·&nbsp; JSON/YAML parsing → Python &nbsp;·&nbsp; Concurrent tasks → Go &nbsp;·&nbsp; Rule of thumb: &gt;200 lines → reconsider Bash</div>
+    </div>
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">VERSION CHECK</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);">
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);">bash --version</span> — target Bash <span style="color:var(--c-kpi);font-family:'JetBrains Mono',monospace;">4.x+</span> for associative arrays, <span style="color:var(--c-kpi);font-family:'JetBrains Mono',monospace;">5.x+</span> for <code style="color:var(--c-primary);">nameref</code>. macOS ships Bash 3.2 (GPL2); install 5.x via Homebrew.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ S2 SCRIPT ANATOMY ═══════════ -->
+<section id="s2" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 02</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Script Anatomy & Execution Model</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">How Bash parses, expands, and executes every line — and the layered structure of a production-grade script.</p>
+
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(34,197,94,0.12);color:var(--c-primary);">Shebang</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(34,197,94,0.08);color:var(--c-primary);" data-tip="Kernel reads first 2 bytes #! — calls named interpreter">#!/usr/bin/env bash</span>
+      <span style="font-size:0.79rem;">Prefer <code style="color:var(--c-primary);">/usr/bin/env bash</code> over <code>/bin/bash</code> for portability across distros. Must be first line, no spaces.</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(167,139,250,0.12);color:var(--c-accent);">Strict Mode</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);" data-tip="Exit on any error">set -e</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);" data-tip="Unset variable = error">set -u</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);" data-tip="Pipe fails if any cmd fails">set -o pipefail</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);" data-tip="Print each command before execution (debug)">set -x</span>
+      <span style="font-size:0.79rem;">Canonical: <code style="color:var(--c-accent);">set -euo pipefail</code> — always use in production scripts</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(245,158,11,0.12);color:var(--c-secondary);">Expansions</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);" data-tip="${VAR} variable expansion">Variable</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);" data-tip="$(cmd) — output of command">Command Sub</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);" data-tip="$((expr)) — integer arithmetic">Arithmetic</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);" data-tip="*.txt, {a,b}, ~ expansion">Glob / Brace</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);" data-tip="Word splitting on IFS characters">Word Split</span>
+      <span style="font-size:0.79rem;color:var(--text-muted);">Order: brace → tilde → param → cmd → arith → word-split → glob</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(250,204,21,0.12);color:var(--c-kpi);">Quoting</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="No expansion at all">'single'</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Variable + command substitution only">"double"</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Escape next character">\backslash</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="$'...' — ANSI C escape sequences">$'c-esc'</span>
+      <span style="font-size:0.79rem;color:var(--text-warn);">💡 Always double-quote <code style="color:var(--c-kpi);">"$VAR"</code> to prevent word splitting and globbing</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(96,165,250,0.12);color:var(--c-blue);">Redirections</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(96,165,250,0.08);color:var(--c-blue);" data-tip="Overwrite file">  &gt; file</span>
+      <span class="badge" style="background:rgba(96,165,250,0.08);color:var(--c-blue);" data-tip="Append to file"> &gt;&gt; file</span>
+      <span class="badge" style="background:rgba(96,165,250,0.08);color:var(--c-blue);" data-tip="Redirect stderr">2&gt; err</span>
+      <span class="badge" style="background:rgba(96,165,250,0.08);color:var(--c-blue);" data-tip="Merge stderr into stdout">2&gt;&amp;1</span>
+      <span class="badge" style="background:rgba(96,165,250,0.08);color:var(--c-blue);" data-tip="Both stdout+stderr to file">&amp;&gt; file</span>
+      <span class="badge" style="background:rgba(96,165,250,0.08);color:var(--c-blue);" data-tip="Here-doc: multi-line stdin">&lt;&lt;EOF</span>
+      <span class="badge" style="background:rgba(96,165,250,0.08);color:var(--c-blue);" data-tip="Process substitution — file-like fd"><(cmd)</span>
+      <span class="badge" style="background:rgba(96,165,250,0.08);color:var(--c-blue);" data-tip="Suppress all output">/dev/null</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(248,113,113,0.12);color:var(--c-warn);">Exit Codes</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-mac);">0 = success</span>
+      <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);">1 = general error</span>
+      <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);">2 = misuse of shell</span>
+      <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);">126 = not executable</span>
+      <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);">127 = cmd not found</span>
+      <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);">128+N = killed by signal N</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">· <code>$?</code> holds last exit code · <code>exit N</code> to return from script</span>
+    </div>
+  </div>
+
+  <!-- annotated script skeleton -->
+  <div class="card" style="padding:22px;margin-top:16px;border-top:2px solid var(--c-primary);">
+    <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">PRODUCTION SCRIPT SKELETON</div>
+    <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+      <div class="cb" style="font-size:0.77rem;">
+<div><span class="kw">#!/usr/bin/env bash</span></div>
+<div><span class="bi">set</span> <span class="fl">-euo</span> pipefail</div>
+<div><span class="cm"># IFS=$'\n\t'  # safer word splitting for files-with-spaces</span></div>
+<div>&nbsp;</div>
+<div><span class="cm">### ── Constants ────────────────────────────────────────</span></div>
+<div><span class="kw">readonly</span> <span class="va">SCRIPT_DIR</span>=<span class="st">$(</span><span class="bi">cd</span> <span class="st">"$(dirname "${BASH_SOURCE[0]}")"</span> <span class="op">&amp;&amp;</span> <span class="bi">pwd</span><span class="st">)</span></div>
+<div><span class="kw">readonly</span> <span class="va">LOG_FILE</span>=<span class="st">"/var/log/$(basename "$0" .sh).log"</span></div>
+<div>&nbsp;</div>
+<div><span class="cm">### ── Helpers ──────────────────────────────────────────</span></div>
+<div><span class="fn">log</span>()  { <span class="bi">echo</span> <span class="st">"[$(date '+%F %T')] $*"</span> <span class="op">|</span> <span class="bi">tee</span> <span class="fl">-a</span> <span class="st">"$LOG_FILE"</span> <span class="op">&gt;&amp;2</span>; }</div>
+<div><span class="fn">die</span>()  { <span class="fn">log</span> <span class="st">"FATAL: $*"</span>; <span class="bi">exit</span> <span class="nm">1</span>; }</div>
+<div><span class="fn">need</span>() { <span class="kw">command</span> <span class="fl">-v</span> <span class="st">"$1"</span> <span class="op">&gt;</span>/dev/null <span class="op">||</span> <span class="fn">die</span> <span class="st">"Required: $1"</span>; }</div>
+<div>&nbsp;</div>
+<div><span class="cm">### ── Cleanup on exit ─────────────────────────────────</span></div>
+<div><span class="fn">cleanup</span>() { <span class="bi">rm</span> <span class="fl">-f</span> <span class="st">"${TMPFILE:-}"</span>; }</div>
+<div><span class="kw">trap</span> cleanup EXIT INT TERM</div>
+<div><span class="va">TMPFILE</span>=<span class="st">$(</span><span class="bi">mktemp</span><span class="st">)</span></div>
+<div>&nbsp;</div>
+<div><span class="cm">### ── Usage ───────────────────────────────────────────</span></div>
+<div><span class="fn">usage</span>() { <span class="bi">echo</span> <span class="st">"Usage: $0 [-v] &lt;target&gt;"</span>; <span class="bi">exit</span> <span class="nm">0</span>; }</div>
+<div><span class="kw">while</span> <span class="bi">getopts</span> <span class="st">"vh"</span> opt; <span class="kw">do</span></div>
+<div>  <span class="kw">case</span> <span class="st">"$opt"</span> <span class="kw">in</span></div>
+<div>    v) <span class="va">VERBOSE</span>=<span class="nm">1</span> ;; h) <span class="fn">usage</span> ;;</div>
+<div>    <span class="op">*</span>) <span class="fn">usage</span> ;;</div>
+<div>  <span class="kw">esac</span></div>
+<div><span class="kw">done</span></div>
+<div><span class="kw">shift</span> <span class="st">"$(( OPTIND - 1 ))"</span></div>
+<div><span class="kw">[</span><span class="kw">[</span> <span class="va">$#</span> <span class="fl">-lt</span> <span class="nm">1</span> <span class="kw">]</span><span class="kw">]</span> <span class="op">&amp;&amp;</span> <span class="fn">usage</span></div>
+<div>&nbsp;</div>
+<div><span class="cm">### ── Main ────────────────────────────────────────────</span></div>
+<div><span class="fn">main</span>() {</div>
+<div>  <span class="fn">need</span> curl; <span class="fn">need</span> jq</div>
+<div>  <span class="fn">log</span> <span class="st">"Processing target: $1"</span></div>
+<div>  <span class="cm"># ... work here ...</span></div>
+<div>}</div>
+<div><span class="fn">main</span> <span class="st">"$@"</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ S3 CORE SYNTAX ═══════════ -->
+<section id="s3" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 03</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Core Syntax — Control Flow & Functions</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Conditionals, loops, case, and function definitions — the structural vocabulary of every Bash script.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+    <div class="card" style="padding:20px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">CONDITIONALS — [[ ]] vs [ ] vs (( ))</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.76rem;">
+<div><span class="cm"># [[ ]] — Bash extended test (preferred)</span></div>
+<div><span class="kw">if</span> <span class="kw">[[</span> <span class="st">-f</span> <span class="st">"$FILE"</span> <span class="op">&amp;&amp;</span> <span class="fl">-r</span> <span class="st">"$FILE"</span> <span class="kw">]]</span>; <span class="kw">then</span></div>
+<div>  <span class="bi">echo</span> <span class="st">"readable file"</span></div>
+<div><span class="kw">elif</span> <span class="kw">[[</span> <span class="va">$COUNT</span> <span class="fl">-gt</span> <span class="nm">10</span> <span class="kw">]]</span>; <span class="kw">then</span></div>
+<div>  <span class="bi">echo</span> <span class="st">"count exceeded"</span></div>
+<div><span class="kw">else</span></div>
+<div>  <span class="bi">echo</span> <span class="st">"default"</span></div>
+<div><span class="kw">fi</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># (( )) — arithmetic condition (no $)</span></div>
+<div><span class="kw">if</span> <span class="kw">((</span> COUNT &gt; 0 <span class="op">&amp;&amp;</span> COUNT &lt; 100 <span class="kw">))</span>; <span class="kw">then</span></div>
+<div>  <span class="bi">echo</span> <span class="st">"in range"</span></div>
+<div><span class="kw">fi</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># one-liner guard pattern</span></div>
+<div><span class="kw">[[</span> <span class="fl">-d</span> <span class="st">"$DIR"</span> <span class="kw">]]</span> <span class="op">||</span> <span class="fn">die</span> <span class="st">"$DIR not found"</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">LOOPS — for / while / until / select</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.76rem;">
+<div><span class="cm"># C-style arithmetic for</span></div>
+<div><span class="kw">for</span> <span class="kw">((</span> i=0; i&lt;10; i++ <span class="kw">))</span>; <span class="kw">do</span></div>
+<div>  <span class="bi">printf</span> <span class="st">"%d\n"</span> <span class="st">"$i"</span></div>
+<div><span class="kw">done</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># glob / array for</span></div>
+<div><span class="kw">for</span> file <span class="kw">in</span> /var/log/<span class="op">*</span>.log; <span class="kw">do</span></div>
+<div>  <span class="bi">gzip</span> <span class="fl">-9</span> <span class="st">"$file"</span></div>
+<div><span class="kw">done</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># while read line-by-line</span></div>
+<div><span class="kw">while</span> <span class="bi">IFS</span>= <span class="bi">read</span> <span class="fl">-r</span> line; <span class="kw">do</span></div>
+<div>  <span class="bi">echo</span> <span class="st">"&gt; $line"</span></div>
+<div><span class="kw">done</span> <span class="op">&lt;</span> <span class="st">"$FILE"</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># break / continue / loop labels</span></div>
+<div><span class="kw">break</span> <span class="nm">2</span>    <span class="cm"># break outer of 2 nested loops</span></div>
+<div><span class="kw">continue</span>  <span class="cm"># skip to next iteration</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">CASE STATEMENT & PATTERN MATCHING</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.76rem;">
+<div><span class="kw">case</span> <span class="st">"$1"</span> <span class="kw">in</span></div>
+<div>  start<span class="op">|</span>run)</div>
+<div>    <span class="fn">start_service</span> <span class="op">&amp;&amp;</span> <span class="fn">log</span> <span class="st">"started"</span> ;;</div>
+<div>  stop)</div>
+<div>    <span class="fn">stop_service</span> ;;</div>
+<div>  <span class="op">--</span>dry<span class="fl">-run</span><span class="op">*</span>)   <span class="cm"># glob matches --dry-run-XXX</span></div>
+<div>    <span class="va">DRY_RUN</span>=<span class="nm">1</span> ;;</div>
+<div>  <span class="op">*</span>.sh)</div>
+<div>    <span class="bi">source</span> <span class="st">"$1"</span> ;;</div>
+<div>  <span class="op">*</span>)</div>
+<div>    <span class="fn">die</span> <span class="st">"Unknown: $1"</span> ;;</div>
+<div><span class="kw">esac</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># ;; terminate, ;& fall-through, ;;& re-test</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">FUNCTIONS — DEFINITION & SCOPE</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.76rem;">
+<div><span class="cm"># preferred syntax (no 'function' keyword)</span></div>
+<div><span class="fn">greet</span>() {</div>
+<div>  <span class="kw">local</span> <span class="va">name</span>=<span class="st">"${1:?name required}"</span></div>
+<div>  <span class="kw">local</span> <span class="fl">-i</span> <span class="va">count</span>=<span class="nm">0</span>    <span class="cm"># -i = integer attr</span></div>
+<div>  <span class="bi">echo</span> <span class="st">"Hello, $name"</span></div>
+<div>  <span class="kw">return</span> <span class="nm">0</span></div>
+<div>}</div>
+<div>&nbsp;</div>
+<div><span class="cm"># return value via stdout capture</span></div>
+<div><span class="fn">get_ts</span>() { <span class="bi">date</span> <span class="st">'+%s'</span>; }</div>
+<div><span class="va">TS</span>=<span class="st">$(</span><span class="fn">get_ts</span><span class="st">)</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># pass array by name (nameref, bash 4.3+)</span></div>
+<div><span class="fn">sum_arr</span>() {</div>
+<div>  <span class="kw">local</span> <span class="fl">-n</span> <span class="va">arr</span>=<span class="st">"$1"</span>   <span class="cm"># nameref</span></div>
+<div>  <span class="kw">local</span> total=<span class="nm">0</span></div>
+<div>  <span class="kw">for</span> v <span class="kw">in</span> <span class="st">"${arr[@]}"</span>; <span class="kw">do</span> (( total += v )); <span class="kw">done</span></div>
+<div>  <span class="bi">echo</span> <span class="st">"$total"</span></div>
+<div>}</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ S4 DATA & ARRAYS ═══════════ -->
+<section id="s4" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 04</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Variables, Arrays & Parameter Expansion</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Bash's data model — scalar variables, indexed arrays, associative arrays, and the powerful parameter expansion mini-language.</p>
+
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(34,197,94,0.12);color:var(--c-primary);">Scalars</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(34,197,94,0.08);color:var(--c-primary);">VAR=value</span>
+      <span class="badge" style="background:rgba(34,197,94,0.08);color:var(--c-primary);" data-tip="No spaces around = ever">no spaces</span>
+      <span class="badge" style="background:rgba(34,197,94,0.08);color:var(--c-primary);" data-tip="local — visible only inside function">local</span>
+      <span class="badge" style="background:rgba(34,197,94,0.08);color:var(--c-primary);" data-tip="readonly — immutable after set">readonly</span>
+      <span class="badge" style="background:rgba(34,197,94,0.08);color:var(--c-primary);" data-tip="declare -i for integer attribute">declare -i</span>
+      <span class="badge" style="background:rgba(34,197,94,0.08);color:var(--c-primary);" data-tip="export — visible to child processes">export</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">· unset VAR removes · ${VAR:-default} safe access</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(245,158,11,0.12);color:var(--c-secondary);">Indexed Array</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);">arr=(a b c)</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);">${arr[0]}</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);" data-tip="All elements — quoting preserves spaces">"${arr[@]}"</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);" data-tip="All indices">${!arr[@]}</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);">arr+=(d e)</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);" data-tip="Length of array">${#arr[@]}</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-secondary);" data-tip="Slice from index 1, length 2">${arr[@]:1:2}</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(167,139,250,0.12);color:var(--c-accent);">Assoc Array</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);" data-tip="Bash 4+ required">declare -A</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">map[key]=val</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">"${map[key]}"</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);" data-tip="All keys">${!map[@]}</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);" data-tip="All values">${map[@]}</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">· iterate: <code>for key in "${!map[@]}"</code></span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(250,204,21,0.12);color:var(--c-kpi);">Special Vars</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Last exit code">$?</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="PID of current shell">$$</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="PID of last background job">$!</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Number of positional params">$#</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="All positional params — keeps quoting">"$@"</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="All params joined by IFS[0]">"$*"</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Script name">$0</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Name of current function">$FUNCNAME</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Line number in script">$LINENO</span>
+    </div>
+  </div>
+
+  <!-- parameter expansion table -->
+  <div class="card" style="padding:22px;margin-top:16px;border-top:2px solid var(--c-secondary);">
+    <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">PARAMETER EXPANSION QUICK REFERENCE</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:0.78rem;">
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);min-width:160px;">${VAR:-default}</span>
+          <span style="color:var(--text-secondary);">Use default if VAR unset or empty</span>
+        </div>
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);min-width:160px;">${VAR:=default}</span>
+          <span style="color:var(--text-secondary);">Assign default if unset, then expand</span>
+        </div>
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-warn);min-width:160px;">${VAR:?message}</span>
+          <span style="color:var(--text-secondary);">Error + exit if unset or empty</span>
+        </div>
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);min-width:160px;">${#VAR}</span>
+          <span style="color:var(--text-secondary);">Length of string value</span>
+        </div>
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);min-width:160px;">${VAR:2:5}</span>
+          <span style="color:var(--text-secondary);">Substring from offset 2, length 5</span>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;">
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);min-width:160px;">${VAR#pattern}</span>
+          <span style="color:var(--text-secondary);">Strip shortest prefix match</span>
+        </div>
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);min-width:160px;">${VAR##pattern}</span>
+          <span style="color:var(--text-secondary);">Strip longest prefix match</span>
+        </div>
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);min-width:160px;">${VAR%pattern}</span>
+          <span style="color:var(--text-secondary);">Strip shortest suffix match</span>
+        </div>
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);min-width:160px;">${VAR/old/new}</span>
+          <span style="color:var(--text-secondary);">Replace first match</span>
+        </div>
+        <div style="display:flex;gap:10px;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);min-width:160px;">${VAR//old/new}</span>
+          <span style="color:var(--text-secondary);">Replace all matches</span>
+        </div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;font-size:0.78rem;">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">${VAR^^}</span>
+        <span style="color:var(--text-secondary);">UPPER case entire string</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">${VAR,,}</span>
+        <span style="color:var(--text-secondary);">lower case entire string</span>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">${VAR^}</span>
+        <span style="color:var(--text-secondary);">Capitalise first char</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ S5 PATTERNS / BEST PRACTICES ═══════════ -->
+<section id="s5" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 05</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Patterns, Traps & Error Handling</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Production patterns — trap-based cleanup, parallel jobs, here-docs, getopts parsing, and the ten most impactful idioms.</p>
+
+  <div style="overflow-x:auto;margin-bottom:20px;">
+    <table style="width:100%;border-collapse:collapse;background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border-subtle);">
+      <thead>
+        <tr style="background:rgba(250,204,21,0.06);border-bottom:2px solid rgba(250,204,21,0.18);">
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">PATTERN / IDIOM</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">SYNTAX / EXAMPLE</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">WHY IT MATTERS</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Trap cleanup</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">trap 'rm -f "$TMP"' EXIT</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Temp files cleaned even on error or Ctrl-C</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>mktemp safe tempfile</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">TMP=$(mktemp)</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Avoids race conditions vs /tmp/fixed-name</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Parallel jobs + wait</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">cmd1 & cmd2 & wait</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Fan-out tasks; wait blocks until all complete</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Bounded parallelism</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">xargs -P 4 -I{} cmd {}</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Max 4 concurrent processes at any time</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Command existence check</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">command -v jq &gt;/dev/null</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Portable; prefer over which or type</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Printf over echo</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">printf '%s\n' "$VAR"</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">echo -e behaviour varies by shell; printf portable</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Read into array</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">mapfile -t arr &lt; file.txt</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Handles spaces/newlines in filenames safely</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Process substitution</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">diff &lt;(cmd1) &lt;(cmd2)</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Avoids temp files for command-to-command diff</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Here-string</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">grep 'x' &lt;&lt;&lt;"$VAR"</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Feed a variable as stdin without echo pipe</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Subshell isolation</strong></td>
+          <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-primary);font-size:0.8rem;">( cd /tmp; rm -f *.tmp )</td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">cd in subshell doesn't change parent's CWD</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- trap signals panel -->
+  <div class="card" style="padding:20px;border-left:3px solid var(--c-warn);">
+    <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">TRAP SIGNAL REFERENCE</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;font-size:0.78rem;">
+      <div><span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-mac);" data-tip="Fires on any exit — normal or error">EXIT</span> <span style="color:var(--text-secondary);">always cleanup</span></div>
+      <div><span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);" data-tip="ERR fires when set -e would exit">ERR</span> <span style="color:var(--text-secondary);">on any error</span></div>
+      <div><span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);" data-tip="Ctrl-C from terminal">INT</span> <span style="color:var(--text-secondary);">keyboard interrupt</span></div>
+      <div><span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);" data-tip="kill command default">TERM</span> <span style="color:var(--text-secondary);">graceful terminate</span></div>
+      <div><span class="badge" style="background:rgba(96,165,250,0.1);color:var(--c-blue);" data-tip="Terminal hangup / reload signal">HUP</span> <span style="color:var(--text-secondary);">reload config</span></div>
+      <div><span class="badge" style="background:rgba(96,165,250,0.1);color:var(--c-blue);" data-tip="Script syntax debug line">DEBUG</span> <span style="color:var(--text-secondary);">before each cmd</span></div>
+      <div><span class="badge" style="background:rgba(96,165,250,0.1);color:var(--c-blue);" data-tip="After each function returns">RETURN</span> <span style="color:var(--text-secondary);">function exit</span></div>
+      <div><span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);" data-tip="trap '' SIGPIPE to ignore broken pipe">PIPE</span> <span style="color:var(--text-secondary);">broken pipe</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════ S6 WORKFLOWS ═══════════ -->
+<section id="s6" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 06</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Scripting Workflows</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Structured step-by-step guides for the two most common real-world Bash scripting tasks.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">ROBUST LOG PROCESSING PIPELINE</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(34,197,94,0.12);color:var(--c-primary);">1</div>
+        <div style="font-size:0.8rem;"><strong>Validate inputs</strong> — check file exists, is readable, has expected header. Use <code style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);">[[ -f "$F" && -r "$F" ]]</code> and <code style="color:var(--c-primary);">wc -l</code> sanity check. Exit early with clear message on failure.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(34,197,94,0.12);color:var(--c-primary);">2</div>
+        <div style="font-size:0.8rem;"><strong>Stream-process with pipeline</strong> — <code style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);">grep | awk | sort | uniq -c | sort -rn | head</code>. Never load entire file into memory. Use <code style="color:var(--c-primary);">while IFS= read -r line</code> for line-by-line logic.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(34,197,94,0.12);color:var(--c-primary);">3</div>
+        <div style="font-size:0.8rem;"><strong>Write atomically</strong> — write to <code style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);">$(mktemp)</code>, then <code style="color:var(--c-primary);">mv</code> to final destination. mv is atomic on same filesystem — readers never see partial output.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(34,197,94,0.12);color:var(--c-primary);">4</div>
+        <div style="font-size:0.8rem;"><strong>Emit structured output</strong> — print CSV or JSON with <code style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);">printf '%s,%s\n' "$k" "$v"</code>. Log progress to stderr (<code style="color:var(--c-primary);">&gt;&amp;2</code>); keep stdout clean for piping downstream.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">DEPLOYMENT / ROLLBACK SCRIPT</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(245,158,11,0.12);color:var(--c-secondary);">1</div>
+        <div style="font-size:0.8rem;"><strong>Pre-flight checks</strong> — verify required tools (<code style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">command -v</code>), environment vars set, disk space (<code style="color:var(--c-secondary);">df -k</code>), and connectivity (<code style="color:var(--c-secondary);">nc -zw2 host port</code>) before any changes.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(245,158,11,0.12);color:var(--c-secondary);">2</div>
+        <div style="font-size:0.8rem;"><strong>Snapshot for rollback</strong> — <code style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">cp -a /opt/app /opt/app.bak.$(date +%s)</code>. Store current git SHA: <code style="color:var(--c-secondary);">PREV=$(git rev-parse HEAD)</code>. Register <code style="color:var(--c-secondary);">trap rollback ERR</code> immediately after.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(245,158,11,0.12);color:var(--c-secondary);">3</div>
+        <div style="font-size:0.8rem;"><strong>Deploy with health check</strong> — apply changes, restart service, then poll <code style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">curl -sf http://localhost/health</code> in a retry loop (max N attempts with sleep backoff). Fail if health never passes.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(245,158,11,0.12);color:var(--c-secondary);">4</div>
+        <div style="font-size:0.8rem;"><strong>Cleanup or rollback</strong> — on success: remove old backup, <code style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">trap - EXIT</code> to disarm. On failure (ERR trap fires): <code style="color:var(--c-secondary);">git checkout "$PREV"</code>, restore backup, restart, alert. Always exit non-zero on rollback.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ S7 BUILTINS ═══════════ -->
+<section id="s7" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 07</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Builtins & Special Commands</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Commands that run inside the shell process — no fork overhead. Know these to avoid unnecessary subprocess spawns.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-blue);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">CORE BUILTINS</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(96,165,250,0.1);color:var(--c-blue);flex-shrink:0;" data-tip="declare -a array / -A assoc / -i int / -r readonly / -n nameref / -x export">declare</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Type-annotate variables; inspect all vars with no args</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(96,165,250,0.1);color:var(--c-blue);flex-shrink:0;" data-tip="read -r -p 'prompt' -t 5 VAR">read</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Read stdin into variable(s); <code>-r</code> raw, <code>-t</code> timeout, <code>-s</code> silent (passwords)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(96,165,250,0.1);color:var(--c-blue);flex-shrink:0;" data-tip="printf '%05d\n' 42">printf</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Formatted output — C-printf format strings; no newline by default</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(96,165,250,0.1);color:var(--c-blue);flex-shrink:0;" data-tip="source ~/.bashrc or . ~/.bashrc">source / .</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Execute script in current shell context — env changes persist</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(96,165,250,0.1);color:var(--c-blue);flex-shrink:0;" data-tip="exec 3>&1 or exec myapp — replaces shell">exec</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Replace shell with command (no fork); also redirects FDs</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(96,165,250,0.1);color:var(--c-blue);flex-shrink:0;" data-tip="eval is dangerous — prefer alternatives">eval</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Execute string as Bash code — avoid; use arrays or declare instead</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">JOB CONTROL & SHELL STATE</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="getopts 'vhf:' opt — POSIX option parsing">getopts</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Parse short flags from <code>$@</code>; colon after letter = requires argument</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="shift N — discard first N positional params">shift</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Discard N leading positional params; <code>$1</code> becomes former <code>$N+1</code></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="wait $PID or wait -n (any)">wait</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Block until background job(s) finish; captures their exit codes</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="mapfile -t arr < file.txt">mapfile</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Read lines from stdin/file into indexed array; preserves whitespace</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="type -a ls shows builtin vs external">type</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Show what a name resolves to — builtin, function, alias, or external</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="enable -n echo disables builtin">enable</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Enable/disable individual builtins — advanced shell configuration</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">STRING & ARITHMETIC TOOLS</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(34,197,94,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="(( x = a * b + c ))  — integer only">(( ))</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Arithmetic — no <code>$</code> on vars; C operators <code>++ -- ** % &amp; | ^ ~ &lt;&lt;</code></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(34,197,94,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="N=$(( A + B ))">$(( ))</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Arithmetic substitution — result as string; use for assignments</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(34,197,94,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="[[ $S =~ ^[0-9]+$ ]]">[[ =~ ]]</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">ERE regex match — captures in <code>BASH_REMATCH</code> array</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(34,197,94,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="SECONDS counts elapsed since shell start">$SECONDS</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Builtin timer — integer seconds since shell started; reset to 0 to benchmark</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(34,197,94,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="RANDOM 0-32767 each read">$RANDOM</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Pseudo-random 0–32767; <code>$(( RANDOM % N ))</code> for range</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">COMMON PITFALLS</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">Unquoted $VAR</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Word splits on spaces → wrong args. Always use <code>"$VAR"</code></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">Parsing ls</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Never parse <code>ls</code> — use glob <code>for f in /path/*</code> or <code>find</code> instead</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">cd without check</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);"><code>cd /nonexistent && rm -rf *</code> = disaster. Use <code>cd dir || die</code></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">[ vs [[ regex</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Never quote the right side of <code>=~</code>: <code>[[ $x =~ ^[0-9]+$ ]]</code> not <code>"^[0-9]+$"</code></span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">Subshell pipe</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);"><code>cmd | while read</code> runs in subshell — vars set inside won't persist. Use <code>&lt;(cmd)</code> or lastpipe option</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════ S8 CHEATSHEET ═══════════ -->
+<section id="s8" class="reveal" style="padding:48px 0 48px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 08</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Values Cheatsheet</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Six copy-ready reference cards — test operators, arithmetic, string ops, getopts template, parallel pattern, and debugging toolkit.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+
+    <!-- Card 1: test operators -->
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">[[ ]] TEST OPERATORS</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.77rem;">
+        <div style="border-bottom:1px solid var(--border-subtle);padding-bottom:3px;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-muted);">FILE TESTS</div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-primary);font-family:'JetBrains Mono',monospace;min-width:40px;">-f</span><span style="color:var(--text-secondary);">regular file exists</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-primary);font-family:'JetBrains Mono',monospace;min-width:40px;">-d</span><span style="color:var(--text-secondary);">directory exists</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-primary);font-family:'JetBrains Mono',monospace;min-width:40px;">-r -w -x</span><span style="color:var(--text-secondary);">readable / writable / executable</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-primary);font-family:'JetBrains Mono',monospace;min-width:40px;">-s</span><span style="color:var(--text-secondary);">file non-empty (size &gt; 0)</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-primary);font-family:'JetBrains Mono',monospace;min-width:40px;">-L</span><span style="color:var(--text-secondary);">is a symlink</span></div>
+        <div style="border-bottom:1px solid var(--border-subtle);padding:3px 0;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-muted);">STRING</div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-secondary);font-family:'JetBrains Mono',monospace;min-width:40px;">-z</span><span style="color:var(--text-secondary);">empty string</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-secondary);font-family:'JetBrains Mono',monospace;min-width:40px;">-n</span><span style="color:var(--text-secondary);">non-empty string</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-secondary);font-family:'JetBrains Mono',monospace;min-width:40px;">= == !=</span><span style="color:var(--text-secondary);">string comparison</span></div>
+        <div style="border-bottom:1px solid var(--border-subtle);padding:3px 0;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-muted);">INTEGER</div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-accent);font-family:'JetBrains Mono',monospace;min-width:40px;">-eq -ne</span><span style="color:var(--text-secondary);">equal / not equal</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-accent);font-family:'JetBrains Mono',monospace;min-width:40px;">-lt -gt</span><span style="color:var(--text-secondary);">less / greater than</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-accent);font-family:'JetBrains Mono',monospace;min-width:40px;">-le -ge</span><span style="color:var(--text-secondary);">≤ / ≥</span></div>
+      </div>
+    </div>
+
+    <!-- Card 2: arithmetic -->
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">ARITHMETIC OPERATIONS</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.75rem;">
+<div><span class="cm"># integer arithmetic — no spaces issue</span></div>
+<div>(( a = 5 <span class="op">*</span> 3 <span class="op">-</span> 1 ))  <span class="cm"># a=14</span></div>
+<div>(( a<span class="op">++</span> )) (( a<span class="op">--</span> ))  <span class="cm"># increment</span></div>
+<div>(( a <span class="op">**</span> 2 ))  <span class="cm"># exponentiation</span></div>
+<div>(( a <span class="op">%</span> 3 ))   <span class="cm"># modulo</span></div>
+<div>(( a <span class="op">&amp;</span> 0xFF ))  <span class="cm"># bitwise AND</span></div>
+<div>(( a <span class="op">|</span> b )) (( a <span class="op">^</span> b ))  <span class="cm"># OR XOR</span></div>
+<div>(( a <span class="op">&lt;&lt;</span> 2 ))  <span class="cm"># left shift ×4</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># float via bc/awk (no Bash native)</span></div>
+<div><span class="va">RESULT</span>=<span class="st">$(</span><span class="bi">echo</span> <span class="st">"scale=2; 22/7"</span> <span class="op">|</span> bc<span class="st">)</span></div>
+<div><span class="va">RESULT</span>=<span class="st">$(</span>awk <span class="st">"BEGIN{printf '%.4f',22/7}"</span><span class="st">)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: string ops -->
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-accent);">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">STRING OPERATIONS QUICK-REF</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.75rem;">
+<div><span class="va">S</span>=<span class="st">"Hello World"</span></div>
+<div><span class="bi">echo</span> <span class="st">"${#S}"</span>         <span class="cm"># 11 — length</span></div>
+<div><span class="bi">echo</span> <span class="st">"${S:6}"</span>        <span class="cm"># World</span></div>
+<div><span class="bi">echo</span> <span class="st">"${S:0:5}"</span>      <span class="cm"># Hello</span></div>
+<div><span class="bi">echo</span> <span class="st">"${S/ /,}"</span>      <span class="cm"># Hello,World</span></div>
+<div><span class="bi">echo</span> <span class="st">"${S,,}"</span>        <span class="cm"># hello world</span></div>
+<div><span class="bi">echo</span> <span class="st">"${S^^}"</span>        <span class="cm"># HELLO WORLD</span></div>
+<div><span class="bi">echo</span> <span class="st">"${S#Hello }"</span>   <span class="cm"># World (strip prefix)</span></div>
+<div><span class="bi">echo</span> <span class="st">"${S%.World}"</span>   <span class="cm"># (strip suffix)</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># regex match</span></div>
+<div><span class="kw">[[</span> <span class="va">$S</span> <span class="op">=~</span> <span class="st">^Hello</span> <span class="kw">]]</span> <span class="op">&amp;&amp;</span> <span class="bi">echo</span> <span class="st">"match"</span></div>
+<div><span class="bi">echo</span> <span class="st">"${BASH_REMATCH[0]}"</span>  <span class="cm"># full match</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 4: getopts template -->
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-kpi);">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">GETOPTS OPTION PARSING</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.75rem;">
+<div><span class="va">VERBOSE</span>=<span class="nm">0</span>; <span class="va">OUTFILE</span>=<span class="st">""</span></div>
+<div>&nbsp;</div>
+<div><span class="fn">usage</span>() {</div>
+<div>  <span class="bi">printf</span> <span class="st">'Usage: %s [-v] [-o out] &lt;file&gt;\n'</span> <span class="st">"$0"</span></div>
+<div>  <span class="bi">exit</span> <span class="nm">0</span></div>
+<div>}</div>
+<div>&nbsp;</div>
+<div><span class="kw">while</span> <span class="bi">getopts</span> <span class="st">":vo:h"</span> opt; <span class="kw">do</span></div>
+<div>  <span class="kw">case</span> <span class="st">"$opt"</span> <span class="kw">in</span></div>
+<div>    v)  <span class="va">VERBOSE</span>=<span class="nm">1</span>          ;;</div>
+<div>    o)  <span class="va">OUTFILE</span>=<span class="st">"$OPTARG"</span>  ;;</div>
+<div>    h)  <span class="fn">usage</span>              ;;</div>
+<div>    <span class="op">:</span>)  <span class="fn">die</span> <span class="st">"-$OPTARG needs arg"</span> ;;</div>
+<div>    <span class="op">\?</span>) <span class="fn">die</span> <span class="st">"Unknown: -$OPTARG"</span> ;;</div>
+<div>  <span class="kw">esac</span></div>
+<div><span class="kw">done</span></div>
+<div><span class="kw">shift</span> <span class="st">"$(( OPTIND - 1 ))"</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5: parallel pattern -->
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-proc);">
+      <div style="font-size:0.68rem;color:var(--c-proc);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">PARALLEL JOBS PATTERN</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.75rem;">
+<div><span class="cm"># run jobs in background, collect PIDs</span></div>
+<div><span class="kw">declare</span> <span class="fl">-A</span> <span class="va">PIDS</span></div>
+<div><span class="kw">for</span> host <span class="kw">in</span> <span class="st">"${HOSTS[@]}"</span>; <span class="kw">do</span></div>
+<div>  ping <span class="fl">-c1</span> <span class="fl">-W2</span> <span class="st">"$host"</span> <span class="op">&gt;</span>/dev/null <span class="op">&amp;</span></div>
+<div>  <span class="va">PIDS</span>[<span class="st">"$host"</span>]=<span class="st">$!</span></div>
+<div><span class="kw">done</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># collect results</span></div>
+<div><span class="kw">for</span> host <span class="kw">in</span> <span class="st">"${!PIDS[@]}"</span>; <span class="kw">do</span></div>
+<div>  <span class="kw">if</span> <span class="bi">wait</span> <span class="st">"${PIDS[$host]}"</span>; <span class="kw">then</span></div>
+<div>    <span class="bi">echo</span> <span class="st">"$host UP"</span></div>
+<div>  <span class="kw">else</span></div>
+<div>    <span class="bi">echo</span> <span class="st">"$host DOWN"</span></div>
+<div>  <span class="kw">fi</span></div>
+<div><span class="kw">done</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># bounded pool via xargs -P</span></div>
+<div><span class="bi">printf</span> <span class="st">'%s\n'</span> <span class="st">"${HOSTS[@]}"</span> <span class="op">|</span></div>
+<div>  xargs <span class="fl">-P4</span> <span class="fl">-I{}</span> bash <span class="fl">-c</span> <span class="st">'ping -c1 {}'</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 6: debugging -->
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-warn);">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">DEBUGGING TOOLKIT</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.75rem;">
+<div><span class="cm"># run script in debug mode</span></div>
+<div>bash <span class="fl">-x</span> script.sh        <span class="cm"># trace all cmds</span></div>
+<div>bash <span class="fl">-n</span> script.sh        <span class="cm"># syntax check only</span></div>
+<div>bash <span class="fl">-v</span> script.sh        <span class="cm"># print as read</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># toggle debug inside script</span></div>
+<div><span class="bi">set</span> <span class="fl">-x</span>    <span class="cm"># on  — prefixes cmds with + </span></div>
+<div><span class="bi">set</span> <span class="op">+x</span>    <span class="cm"># off — silence again</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># caller shows call stack in functions</span></div>
+<div><span class="fn">debug_fn</span>() { <span class="bi">echo</span> <span class="st">"Called from: $(caller 0)"</span>; }</div>
+<div>&nbsp;</div>
+<div><span class="cm"># shellcheck — static analysis</span></div>
+<div>shellcheck script.sh</div>
+<div><span class="cm"># SC2086 unquoted, SC2064 trap quoting</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># benchmark a section</span></div>
+<div><span class="va">SECONDS</span>=<span class="nm">0</span>; heavy_fn; <span class="bi">echo</span> <span class="st">"${SECONDS}s"</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</div><!-- /container -->
+
+<footer style="background:rgba(0,0,0,0.4);border-top:1px solid var(--border-subtle);padding:36px 20px;text-align:center;margin-top:32px;">
+  <div style="max-width:700px;margin:0 auto;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.1em;margin-bottom:14px;">FURTHER READING</div>
+    <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+      <a href="https://www.gnu.org/software/bash/manual/" target="_blank" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">GNU Bash Manual</a>
+      <a href="https://www.shellcheck.net/" target="_blank" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">ShellCheck</a>
+      <a href="https://google.github.io/styleguide/shellguide.html" target="_blank" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">Google Shell Guide</a>
+      <a href="https://mywiki.wooledge.org/BashFAQ" target="_blank" style="background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">Greg's Bash FAQ</a>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-muted);">🐚 Bash Scripting in a Nutshell · Engineer Reference · GNU Bash 5.x · POSIX IEEE 1003.1</div>
+  </div>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const h = document.documentElement;
+    const d = h.classList.contains('dark');
+    h.classList.toggle('dark',!d); h.classList.toggle('light',d);
+    document.getElementById('theme-icon').textContent = d ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = d ? 'Dark' : 'Light';
+  }
+  function ss(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior:'smooth', block:'start' });
+  }
+  const obs = new IntersectionObserver(
+    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+    { threshold: 0.07 }
+  );
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  const sections = ['hero','s1','s2','s3','s4','s5','s6','s7','s8'];
+  const dots = document.querySelectorAll('.toc-dot');
+  const tObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const i = sections.indexOf(e.target.id);
+        if (i >= 0) dots.forEach((d,j) => d.classList.toggle('active', i===j));
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(id => { const el = document.getElementById(id); if (el) tObs.observe(el); });
+
+  function copyBlock(btn) {
+    const block = btn.nextElementSibling;
+    navigator.clipboard.writeText(block.innerText.trim()).then(() => {
+      btn.textContent = 'copied!'; btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+</script>
+</body>
+</html>

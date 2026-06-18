@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>5G NR in a Nutshell – Engineer's Quick Reference</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        fontFamily: {
+          mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+        },
+      }
+    }
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg-primary: #04080e;
+    --bg-card: #0a1220;
+    --bg-card-hover: #0e1928;
+    --border-subtle: rgba(255,255,255,0.07);
+    --text-primary: #dce8f8;
+    --text-secondary: #6e88a8;
+    --text-muted: #3c5068;
+
+    /* 5G NR palette — violet, cyan, green, gold */
+    --c-nr:    #818cf8; /* NR/5G brand */
+    --c-mmw:   #c084fc; /* mmWave */
+    --c-sub6:  #38bdf8; /* Sub-6 */
+    --c-mac:   #2dd4bf; /* MAC/PHY */
+    --c-kpi:   #facc15; /* KPIs */
+    --c-warn:  #fb7185; /* critical */
+    --c-proc:  #fb923c; /* procedures */
+    --c-eMBB:  #34d399; /* eMBB */
+    --c-uRLLC: #f472b6; /* URLLC */
+    --c-mMTC:  #a78bfa; /* mMTC */
+  }
+  .light {
+    --bg-primary: #edf2f9;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f4f8ff;
+    --border-subtle: rgba(0,0,0,0.08);
+    --text-primary: #0e1c2e;
+    --text-secondary: #3d5880;
+    --text-muted: #90a8c0;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
+    transition: background 0.3s, color 0.3s;
+  }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: #1a2a40; border-radius: 10px; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    transition: all 0.25s ease;
+  }
+  .card:hover { background: var(--bg-card-hover); transform: translateY(-2px); }
+
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.67rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  #toc-panel {
+    position: fixed; left: 18px; top: 50%; transform: translateY(-50%);
+    z-index: 50; display: flex; flex-direction: column; gap: 8px;
+  }
+  .toc-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-muted); cursor: pointer;
+    transition: all 0.2s; position: relative;
+  }
+  .toc-dot:hover, .toc-dot.active {
+    background: var(--c-nr); transform: scale(1.5);
+    box-shadow: 0 0 8px rgba(129,140,248,0.65);
+  }
+  .toc-dot::after {
+    content: attr(data-label); position: absolute; left: 18px; top: 50%;
+    transform: translateY(-50%); white-space: nowrap; font-size: 0.68rem;
+    color: var(--text-secondary); opacity: 0; pointer-events: none;
+    transition: opacity 0.2s; background: var(--bg-card);
+    padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); z-index: 10;
+  }
+  .toc-dot:hover::after { opacity: 1; }
+
+  #theme-btn {
+    position: fixed; top: 18px; right: 18px; z-index: 100;
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    color: var(--text-secondary); padding: 7px 14px; border-radius: 20px;
+    font-size: 0.73rem; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  #theme-btn:hover { border-color: var(--c-nr); color: var(--c-nr); }
+
+  .hero-grid {
+    background-image:
+      linear-gradient(rgba(129,140,248,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(129,140,248,0.04) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  .sec-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.63rem;
+    color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase;
+  }
+
+  [data-tip] { position: relative; cursor: help; }
+  [data-tip]::after {
+    content: attr(data-tip); position: absolute; bottom: calc(100% + 6px);
+    left: 50%; transform: translateX(-50%); background: #0a1220;
+    color: #dce8f8; border: 1px solid rgba(129,140,248,0.25);
+    padding: 5px 10px; border-radius: 5px; font-size: 0.7rem;
+    white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s; z-index: 100; font-family: 'Inter', sans-serif;
+  }
+  [data-tip]:hover::after { opacity: 1; }
+
+  .layer-row {
+    display: flex; align-items: stretch; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border-subtle); margin-bottom: 6px;
+  }
+  .layer-label {
+    width: 90px; flex-shrink: 0; display: flex; align-items: center;
+    justify-content: center; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em;
+    padding: 10px 8px; text-align: center;
+  }
+  .layer-content {
+    flex: 1; padding: 10px 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+    font-size: 0.78rem; color: var(--text-secondary);
+  }
+
+  .proc-step {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 11px 0; border-bottom: 1px solid var(--border-subtle);
+  }
+  .proc-step:last-child { border-bottom: none; }
+  .step-num {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  }
+
+  .use-case-pill {
+    padding: 16px 18px; border-radius: 10px; text-align: center;
+    border: 1px solid;
+  }
+
+  @media (max-width: 768px) {
+    #toc-panel { display: none; }
+    #theme-btn { top: 10px; right: 10px; padding: 5px 10px; font-size: 0.68rem; }
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+</style>
+</head>
+<body>
+
+<button id="theme-btn" onclick="toggleTheme()">
+  <span id="theme-icon">☀️</span>
+  <span id="theme-label">Light</span>
+</button>
+
+<nav id="toc-panel" aria-label="Sections">
+  <div class="toc-dot active" data-label="Home" onclick="scrollTo('hero')"></div>
+  <div class="toc-dot" data-label="What is 5G NR?" onclick="scrollTo('s1')"></div>
+  <div class="toc-dot" data-label="Architecture" onclick="scrollTo('s2')"></div>
+  <div class="toc-dot" data-label="Air Interface" onclick="scrollTo('s3')"></div>
+  <div class="toc-dot" data-label="Protocol Stack" onclick="scrollTo('s4')"></div>
+  <div class="toc-dot" data-label="Key KPIs" onclick="scrollTo('s5')"></div>
+  <div class="toc-dot" data-label="Procedures" onclick="scrollTo('s6')"></div>
+  <div class="toc-dot" data-label="Channels" onclick="scrollTo('s7')"></div>
+  <div class="toc-dot" data-label="Quick Ref" onclick="scrollTo('s8')"></div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section id="hero" class="hero-grid min-h-screen flex flex-col items-center justify-center px-6 py-24 relative overflow-hidden">
+  <div style="position:absolute;top:5%;left:5%;width:600px;height:600px;background:radial-gradient(circle,rgba(129,140,248,0.07),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:5%;right:5%;width:400px;height:400px;background:radial-gradient(circle,rgba(192,132,252,0.07),transparent 70%);pointer-events:none;"></div>
+
+  <div class="text-center max-w-3xl relative z-10 reveal">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(129,140,248,0.08);border:1px solid rgba(129,140,248,0.22);border-radius:20px;padding:4px 16px;margin-bottom:24px;">
+      <span style="width:6px;height:6px;background:var(--c-nr);border-radius:50%;animation:pulse 2s infinite;"></span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-nr);letter-spacing:0.1em;">3GPP RELEASE 15+ · NEW RADIO · IMT-2020</span>
+    </div>
+
+    <h1 style="font-size:clamp(2.2rem,6vw,4rem);font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:16px;">
+      <span style="color:var(--text-primary);">5G NR</span>
+      <span style="background:linear-gradient(135deg,#818cf8,#c084fc,#38bdf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;"> in a Nutshell</span>
+      <br>
+      <span style="color:var(--text-primary);">Engineer's Quick Reference</span>
+    </h1>
+
+    <p style="font-size:1.05rem;color:var(--text-secondary);max-width:530px;margin:0 auto 32px;line-height:1.7;">
+      New Radio architecture, numerology, massive MIMO, gNB/5GC, KPIs, and procedures —
+      the complete <span style="color:var(--c-nr);font-family:'JetBrains Mono',monospace;">5G NR</span> reference in one page.
+    </p>
+
+    <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap;margin-bottom:40px;">
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:700;color:var(--c-nr);">20</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Gbps peak DL</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:700;color:var(--c-sub6);">1 ms</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">URLLC latency</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:700;color:var(--c-eMBB);">FR1+FR2</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Frequency ranges</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:700;color:var(--c-kpi);">Rel-15</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">First NR spec</div>
+      </div>
+    </div>
+
+    <button onclick="scrollTo('s1')" style="background:linear-gradient(135deg,#4338ca,#7c3aed,#6366f1);color:#fff;border:none;padding:13px 34px;border-radius:10px;font-size:0.93rem;font-weight:600;cursor:pointer;letter-spacing:0.02em;box-shadow:0 0 28px rgba(129,140,248,0.35);transition:all 0.2s;" onmouseover="this.style.boxShadow='0 0 44px rgba(129,140,248,0.6)'" onmouseout="this.style.boxShadow='0 0 28px rgba(129,140,248,0.35)'">
+      Explore 5G NR ↓
+    </button>
+  </div>
+</section>
+
+<div style="max-width:960px;margin:0 auto;padding:0 20px;">
+
+<!-- ═══════════════ S1: WHAT IS 5G NR ═══════════════ -->
+<section id="s1" class="reveal" style="padding:80px 0 40px;">
+  <div class="sec-num">01 — OVERVIEW</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">What is 5G NR?</h2>
+
+  <!-- 3 use case pillars -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div class="use-case-pill" style="background:rgba(52,211,153,0.06);border-color:rgba(52,211,153,0.2);">
+      <div style="font-size:1.6rem;margin-bottom:8px;">🚀</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--c-eMBB);font-size:0.85rem;margin-bottom:4px;">eMBB</div>
+      <div style="font-size:0.72rem;color:var(--text-secondary);">Enhanced Mobile Broadband · 20 Gbps peak · HD video, AR/VR</div>
+    </div>
+    <div class="use-case-pill" style="background:rgba(244,114,182,0.06);border-color:rgba(244,114,182,0.2);">
+      <div style="font-size:1.6rem;margin-bottom:8px;">⚡</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--c-uRLLC);font-size:0.85rem;margin-bottom:4px;">URLLC</div>
+      <div style="font-size:0.72rem;color:var(--text-secondary);">Ultra-Reliable Low-Latency · &lt;1 ms · Autonomous vehicles, surgery</div>
+    </div>
+    <div class="use-case-pill" style="background:rgba(167,139,250,0.06);border-color:rgba(167,139,250,0.2);">
+      <div style="font-size:1.6rem;margin-bottom:8px;">🌐</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--c-mMTC);font-size:0.85rem;margin-bottom:4px;">mMTC</div>
+      <div style="font-size:0.72rem;color:var(--text-secondary);">Massive Machine-Type Comm · 10⁶ devices/km² · IoT sensors</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+    <div class="card" style="padding:24px;border-left:3px solid var(--c-nr);">
+      <div style="font-size:0.68rem;color:var(--c-nr);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:10px;">WHAT'S NEW vs LTE</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:0.8rem;color:var(--text-secondary);">
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-nr);">✦</span><span>Flexible numerology (multiple SCS options)</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-nr);">✦</span><span>mmWave support (FR2: 24–52 GHz)</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-nr);">✦</span><span>Massive MIMO / beamforming (up to 256TRX)</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-nr);">✦</span><span>Network slicing on 5GC</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-nr);">✦</span><span>PDCCH / DMRS fully redesigned</span></div>
+        <div style="display:flex;gap:8px;"><span style="color:var(--c-nr);">✦</span><span>SA (standalone) + NSA deployment modes</span></div>
+      </div>
+    </div>
+    <div class="card" style="padding:24px;border-left:3px solid var(--c-sub6);">
+      <div style="font-size:0.68rem;color:var(--c-sub6);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:10px;">FREQUENCY RANGES</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <div style="background:rgba(56,189,248,0.08);border-radius:6px;padding:10px 12px;">
+          <div style="font-family:'JetBrains Mono',monospace;color:var(--c-sub6);font-weight:700;font-size:0.82rem;">FR1 — Sub-6 GHz</div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:3px;">450 MHz – 7.125 GHz · Max BW 100 MHz · Coverage-first</div>
+        </div>
+        <div style="background:rgba(192,132,252,0.08);border-radius:6px;padding:10px 12px;">
+          <div style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);font-weight:700;font-size:0.82rem;">FR2 — mmWave</div>
+          <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:3px;">24.25 – 52.6 GHz · Max BW 400 MHz · Capacity-first</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Deployment modes -->
+  <div class="card" style="padding:20px 24px;border-left:3px solid var(--c-kpi);">
+    <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">DEPLOYMENT OPTIONS (3GPP ARCHITECTURE)</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;">
+      <div style="background:rgba(250,204,21,0.08);border:1px solid rgba(250,204,21,0.2);border-radius:6px;padding:10px 14px;text-align:center;min-width:90px;">
+        <div style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);font-weight:700;font-size:0.82rem;">NSA Opt.3x</div>
+        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px;">LTE anchor + NR</div>
+      </div>
+      <div style="background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.15);border-radius:6px;padding:10px 14px;text-align:center;min-width:90px;">
+        <div style="font-family:'JetBrains Mono',monospace;color:var(--c-eMBB);font-weight:700;font-size:0.82rem;">SA Opt.2</div>
+        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px;">5GC + gNB only</div>
+      </div>
+      <div style="background:rgba(129,140,248,0.06);border:1px solid rgba(129,140,248,0.15);border-radius:6px;padding:10px 14px;text-align:center;min-width:90px;">
+        <div style="font-family:'JetBrains Mono',monospace;color:var(--c-nr);font-weight:700;font-size:0.82rem;">SA Opt.4/7</div>
+        <div style="font-size:0.68rem;color:var(--text-muted);margin-top:3px;">5GC + NR + LTE</div>
+      </div>
+      <div style="flex:1;padding:10px 14px;font-size:0.78rem;color:var(--text-secondary);">
+        Most operators begin with <strong>NSA Option 3x</strong> (LTE anchor, NR adds capacity). Migration to <strong>SA Option 2</strong> enables full 5GC features: network slicing, edge compute, URLLC.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S2: ARCHITECTURE ═══════════════ -->
+<section id="s2" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">02 — ARCHITECTURE</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">5G System Architecture</h2>
+
+  <div class="card" style="padding:28px;margin-bottom:18px;position:relative;overflow:hidden;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#818cf8,#c084fc,#2dd4bf);"></div>
+    <div style="font-size:0.68rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:18px;">5G SYSTEM (5GS) — SERVICE-BASED ARCHITECTURE</div>
+
+    <!-- Architecture diagram -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;margin-bottom:18px;">
+
+      <div style="text-align:center;padding:14px 16px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:8px;min-width:75px;">
+        <div style="font-size:1.3rem;">📱</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.73rem;color:var(--c-sub6);font-weight:700;margin-top:4px;">UE</div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;padding:0 7px;">
+        <div style="font-size:0.58rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">Uu</div>
+        <div style="height:2px;width:40px;background:linear-gradient(90deg,rgba(56,189,248,0.3),rgba(56,189,248,0.8));"></div>
+      </div>
+
+      <!-- gNB with CU/DU split -->
+      <div style="background:rgba(129,140,248,0.06);border:1px solid rgba(129,140,248,0.2);border-radius:8px;padding:12px 14px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.73rem;color:var(--c-nr);font-weight:700;text-align:center;margin-bottom:8px;">gNB 🗼</div>
+        <div style="display:flex;gap:6px;justify-content:center;">
+          <div style="background:rgba(129,140,248,0.12);padding:5px 8px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-nr);">CU-CP</div>
+            <div style="font-size:0.58rem;color:var(--text-muted);">RRC/PDCP-C</div>
+          </div>
+          <div style="background:rgba(129,140,248,0.12);padding:5px 8px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-nr);">CU-UP</div>
+            <div style="font-size:0.58rem;color:var(--text-muted);">PDCP-U/SDAP</div>
+          </div>
+          <div style="background:rgba(45,212,191,0.1);padding:5px 8px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-mac);">DU</div>
+            <div style="font-size:0.58rem;color:var(--text-muted);">RLC/MAC/PHY</div>
+          </div>
+          <div style="background:rgba(250,204,21,0.08);padding:5px 8px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-kpi);">RU</div>
+            <div style="font-size:0.58rem;color:var(--text-muted);">RF/PHY-low</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;padding:0 7px;">
+        <div style="font-size:0.58rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">N1/N2/N3</div>
+        <div style="height:2px;width:40px;background:linear-gradient(90deg,rgba(129,140,248,0.4),rgba(129,140,248,0.8));"></div>
+      </div>
+
+      <!-- 5GC NFs -->
+      <div style="background:rgba(45,212,191,0.04);border:1px solid rgba(45,212,191,0.15);border-radius:8px;padding:12px 14px;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.72rem;color:var(--c-mac);font-weight:700;text-align:center;margin-bottom:8px;">5GC Network Functions</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;">
+          <div style="background:rgba(45,212,191,0.1);padding:5px 7px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-mac);font-weight:700;">AMF</div>
+            <div style="font-size:0.57rem;color:var(--text-muted);">Access & Mobility</div>
+          </div>
+          <div style="background:rgba(45,212,191,0.1);padding:5px 7px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-mac);font-weight:700;">SMF</div>
+            <div style="font-size:0.57rem;color:var(--text-muted);">Session Mgmt</div>
+          </div>
+          <div style="background:rgba(45,212,191,0.1);padding:5px 7px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-mac);font-weight:700;">UPF</div>
+            <div style="font-size:0.57rem;color:var(--text-muted);">User Plane</div>
+          </div>
+          <div style="background:rgba(45,212,191,0.1);padding:5px 7px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-mac);font-weight:700;">UDM</div>
+            <div style="font-size:0.57rem;color:var(--text-muted);">Subscriber DB</div>
+          </div>
+          <div style="background:rgba(45,212,191,0.1);padding:5px 7px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-mac);font-weight:700;">PCF</div>
+            <div style="font-size:0.57rem;color:var(--text-muted);">Policy</div>
+          </div>
+          <div style="background:rgba(45,212,191,0.1);padding:5px 7px;border-radius:4px;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--c-mac);font-weight:700;">NSSF</div>
+            <div style="font-size:0.57rem;color:var(--text-muted);">Network Slicing</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;align-items:center;padding:0 7px;">
+        <div style="font-size:0.58rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">N6</div>
+        <div style="height:2px;width:35px;background:linear-gradient(90deg,rgba(52,211,153,0.4),rgba(52,211,153,0.8));"></div>
+      </div>
+
+      <div style="text-align:center;padding:14px 16px;background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.2);border-radius:8px;min-width:75px;">
+        <div style="font-size:1.3rem;">🌐</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.73rem;color:var(--c-eMBB);font-weight:700;margin-top:4px;">DN</div>
+        <div style="font-size:0.58rem;color:var(--text-muted);">Data Network</div>
+      </div>
+    </div>
+
+    <div style="background:rgba(129,140,248,0.05);border-radius:6px;padding:12px 16px;font-size:0.78rem;color:var(--text-secondary);">
+      💡 <strong>Key difference from LTE:</strong> gNB splits into CU (Centralised Unit) + DU (Distributed Unit) + RU (Radio Unit). 5GC uses a Service-Based Architecture (SBA) where NFs communicate via REST APIs over the Service Bus (SBI). No more monolithic MME/SGW.
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S3: AIR INTERFACE ═══════════════ -->
+<section id="s3" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">03 — AIR INTERFACE</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">NR Air Interface</h2>
+
+  <!-- Numerology table -->
+  <div class="card" style="padding:24px;margin-bottom:18px;">
+    <div style="font-size:0.68rem;color:var(--c-sub6);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:14px;">FLEXIBLE NUMEROLOGY — µ (MU) PARAMETER</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:rgba(56,189,248,0.06);border-bottom:2px solid rgba(56,189,248,0.15);">
+            <th style="padding:9px 13px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-sub6);letter-spacing:0.08em;">µ</th>
+            <th style="padding:9px 13px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-sub6);letter-spacing:0.08em;">SCS (kHz)</th>
+            <th style="padding:9px 13px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-sub6);letter-spacing:0.08em;">SLOT (ms)</th>
+            <th style="padding:9px 13px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-sub6);letter-spacing:0.08em;">USE CASE</th>
+            <th style="padding:9px 13px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-sub6);letter-spacing:0.08em;">RANGE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border-subtle);">
+            <td style="padding:9px 13px;"><span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-eMBB);">0</span></td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-eMBB);">15</td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-eMBB);">1.0</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-secondary);">eMBB sub-6, backward compat</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-muted);">FR1</td>
+          </tr>
+          <tr style="background:rgba(255,255,255,0.01);border-bottom:1px solid var(--border-subtle);">
+            <td style="padding:9px 13px;"><span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);">1</span></td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-sub6);">30</td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-sub6);">0.5</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-secondary);">eMBB, most deployed sub-6</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-muted);">FR1</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-subtle);">
+            <td style="padding:9px 13px;"><span class="badge" style="background:rgba(244,114,182,0.12);color:var(--c-uRLLC);">2</span></td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-uRLLC);">60</td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-uRLLC);">0.25</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-secondary);">URLLC / mmWave</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-muted);">FR1 / FR2</td>
+          </tr>
+          <tr style="background:rgba(255,255,255,0.01);border-bottom:1px solid var(--border-subtle);">
+            <td style="padding:9px 13px;"><span class="badge" style="background:rgba(192,132,252,0.12);color:var(--c-mmw);">3</span></td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">120</td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">0.125</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-secondary);">mmWave eMBB</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-muted);">FR2</td>
+          </tr>
+          <tr>
+            <td style="padding:9px 13px;"><span class="badge" style="background:rgba(192,132,252,0.12);color:var(--c-mmw);">4</span></td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">240</td>
+            <td style="padding:9px 13px;font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">0.0625</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-secondary);">mmWave reference signals only</td>
+            <td style="padding:9px 13px;font-size:0.78rem;color:var(--text-muted);">FR2</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+    <div class="card" style="padding:24px;border-left:3px solid var(--c-sub6);">
+      <div style="font-size:0.68rem;color:var(--c-sub6);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">MODULATION (NR extends LTE)</div>
+      <div style="display:flex;flex-direction:column;gap:7px;font-size:0.8rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-eMBB);">QPSK</span>
+          <span style="color:var(--text-muted);font-size:0.75rem;">2 bits/sym · Cell edge</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);">16-QAM</span>
+          <span style="color:var(--text-muted);font-size:0.75rem;">4 bits/sym</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="badge" style="background:rgba(129,140,248,0.12);color:var(--c-nr);">64-QAM</span>
+          <span style="color:var(--text-muted);font-size:0.75rem;">6 bits/sym</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="badge" style="background:rgba(250,204,21,0.12);color:var(--c-kpi);">256-QAM</span>
+          <span style="color:var(--text-muted);font-size:0.75rem;">8 bits/sym · High SINR</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span class="badge" style="background:rgba(192,132,252,0.15);color:var(--c-mmw);">1024-QAM</span>
+          <span style="color:var(--text-muted);font-size:0.75rem;">10 bits/sym · Rel-16 mmWave</span>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:24px;border-left:3px solid var(--c-nr);">
+      <div style="font-size:0.68rem;color:var(--c-nr);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">MASSIVE MIMO / BEAMFORMING</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:10px;">NR enables large antenna arrays. Beamforming steers energy toward UE, improving SINR and capacity.</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;"><span>Sub-6 GHz typical</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-nr);">64T64R</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>mmWave typical</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">256T256R</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Beamforming type</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-nr);">Analog + Digital</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>CSI-RS ports</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-nr);">Up to 32</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>MU-MIMO layers</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-nr);">Up to 8 DL</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S4: PROTOCOL STACK ═══════════════ -->
+<section id="s4" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">04 — PROTOCOL STACK</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">NR Protocol Stack</h2>
+
+  <div class="card" style="padding:26px;">
+    <div style="max-width:620px;margin:0 auto;">
+
+      <div class="layer-row" style="background:rgba(129,140,248,0.06);border-color:rgba(129,140,248,0.2);">
+        <div class="layer-label" style="background:rgba(129,140,248,0.12);color:var(--c-nr);">RRC</div>
+        <div class="layer-content">System info · RRC setup/reconfig · Measurement config · Beam management · Connection release · Paging</div>
+      </div>
+
+      <div class="layer-row" style="background:rgba(45,212,191,0.04);border-color:rgba(45,212,191,0.15);">
+        <div class="layer-label" style="background:rgba(45,212,191,0.1);color:var(--c-mac);">SDAP</div>
+        <div class="layer-content"><strong>NEW in NR</strong> · Maps QoS flows to DRBs · Reflective QoS mapping · Replaces LTE's QCI bearer model with flow-based QoS</div>
+      </div>
+
+      <div class="layer-row" style="background:rgba(56,189,248,0.04);border-color:rgba(56,189,248,0.15);">
+        <div class="layer-label" style="background:rgba(56,189,248,0.1);color:var(--c-sub6);">PDCP</div>
+        <div class="layer-content">Header compression (ROHC) · Ciphering / integrity · Duplication for URLLC · Data split for CA / DC</div>
+      </div>
+
+      <div class="layer-row" style="background:rgba(52,211,153,0.04);border-color:rgba(52,211,153,0.15);">
+        <div class="layer-label" style="background:rgba(52,211,153,0.1);color:var(--c-eMBB);">RLC</div>
+        <div class="layer-content">Segmentation & reassembly · ARQ (AM mode) · UM for URLLC · TM for broadcast</div>
+      </div>
+
+      <div class="layer-row" style="background:rgba(250,204,21,0.03);border-color:rgba(250,204,21,0.12);">
+        <div class="layer-label" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);">MAC</div>
+        <div class="layer-content">HARQ (16-process DL, 8 UL) · Scheduling · BSR/PHR · BWP switching · Beam failure recovery</div>
+      </div>
+
+      <div class="layer-row" style="background:rgba(192,132,252,0.04);border-color:rgba(192,132,252,0.15);">
+        <div class="layer-label" style="background:rgba(192,132,252,0.1);color:var(--c-mmw);">PHY</div>
+        <div class="layer-content">OFDM DL + UL (no SC-FDMA) · LDPC (data) / Polar codes (control) · Massive MIMO · Beam sweeping · SSB</div>
+      </div>
+
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px;">
+      <div style="background:rgba(192,132,252,0.06);border-radius:6px;padding:11px 13px;">
+        <div style="font-size:0.65rem;color:var(--c-mmw);font-family:'JetBrains Mono',monospace;margin-bottom:5px;">LDPC</div>
+        <div style="font-size:0.75rem;color:var(--text-secondary);">Replaces Turbo code for data channels. Lower complexity at high throughput.</div>
+      </div>
+      <div style="background:rgba(56,189,248,0.05);border-radius:6px;padding:11px 13px;">
+        <div style="font-size:0.65rem;color:var(--c-sub6);font-family:'JetBrains Mono',monospace;margin-bottom:5px;">POLAR CODES</div>
+        <div style="font-size:0.75rem;color:var(--text-secondary);">Used for control channels (PBCH, DCI, UCI). First-ever polar code deployment.</div>
+      </div>
+      <div style="background:rgba(129,140,248,0.05);border-radius:6px;padding:11px 13px;">
+        <div style="font-size:0.65rem;color:var(--c-nr);font-family:'JetBrains Mono',monospace;margin-bottom:5px;">SDAP (NEW)</div>
+        <div style="font-size:0.75rem;color:var(--text-secondary);">5G introduces QoS flow IDs. SDAP maps flows → radio bearers based on 5QI.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S5: KPIs ═══════════════ -->
+<section id="s5" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">05 — PERFORMANCE</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">Key Performance Indicators</h2>
+
+  <div style="overflow-x:auto;margin-bottom:18px;">
+    <table style="width:100%;border-collapse:collapse;background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border-subtle);">
+      <thead>
+        <tr style="background:rgba(250,204,21,0.06);border-bottom:2px solid rgba(250,204,21,0.18);">
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">KPI</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">TARGET</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">THRESHOLD</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">FORMULA / NOTE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>NR RRC Setup SR</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;">&gt; 98%</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; 95%</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">RRC Setup Success / Attempts</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>PDU Session Setup SR</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;">&gt; 98%</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; 95%</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Replaces E-RAB from LTE</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>NR Call Drop Rate</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;">&lt; 0.5%</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 2%</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Abnormal PDU releases / Total PDUs</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>DL Throughput</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;">&gt; 100 Mbps</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; 30 Mbps</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Avg cell DL (busy hour, NR only)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>SS-RSRP</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;">&gt; -100 dBm</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; -110 dBm</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Sync Signal Reference Signal Received Power</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>SS-SINR</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;">&gt; 0 dB</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; -3 dB</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Measured from SSB reference signals</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>HO Success Rate</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;">&gt; 99%</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; 97%</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Intra-NR + NR↔LTE (NSA)</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>PRB Utilisation</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;">&lt; 70%</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 85%</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Used PRBs / Available PRBs × 100</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SS-RSRP ranges -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-sub6);">
+      <div style="font-size:0.68rem;color:var(--c-sub6);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">SS-RSRP RANGES (NR)</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-eMBB);">Excellent</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-eMBB);">&gt; -80 dBm</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-kpi);">Good</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">-80 to -95 dBm</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-proc);">Fair</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-proc);">-95 to -105 dBm</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-warn);">Poor</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-warn);">&lt; -110 dBm</span></div>
+      </div>
+    </div>
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-kpi);">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">IMT-2020 REQUIREMENTS</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;"><span>Peak DL throughput</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">20 Gbps</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Peak UL throughput</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">10 Gbps</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>User-plane latency</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">4 ms (eMBB)</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>URLLC latency</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">1 ms</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Connection density</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">10⁶/km²</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S6: PROCEDURES ═══════════════ -->
+<section id="s6" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">06 — PROCEDURES</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">Key Procedures</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-sub6);">
+      <div style="font-size:0.68rem;color:var(--c-sub6);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">INITIAL ACCESS (NR)</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);">1</div>
+        <div style="font-size:0.8rem;"><strong>SSB Detection</strong> — UE detects Sync Signal Block (PSS/SSS/PBCH). Up to 64 beams swept per 20 ms.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);">2</div>
+        <div style="font-size:0.8rem;"><strong>MIB / SIB1</strong> — UE decodes PBCH for MIB, then SIB1 for cell access parameters (RACH config).</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);">3</div>
+        <div style="font-size:0.8rem;"><strong>RACH (4-step)</strong> — Msg1 preamble → Msg2 RAR → Msg3 RRC Setup Req → Msg4 Contention Resolution.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);">4</div>
+        <div style="font-size:0.8rem;"><strong>Registration</strong> — AMF authenticates, assigns 5G-GUTI, allocates PDU session via SMF/UPF.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-nr);">
+      <div style="font-size:0.68rem;color:var(--c-nr);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">NR HANDOVER</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(129,140,248,0.12);color:var(--c-nr);">1</div>
+        <div style="font-size:0.8rem;"><strong>A3/A5 Trigger</strong> — UE L3 measurement report. Same events as LTE but with beam-level granularity.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(129,140,248,0.12);color:var(--c-nr);">2</div>
+        <div style="font-size:0.8rem;"><strong>Xn HO Request</strong> — Source gNB-CU sends Xn HO Request (Xn = X2 equivalent in NR).</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(129,140,248,0.12);color:var(--c-nr);">3</div>
+        <div style="font-size:0.8rem;"><strong>RRC Reconfiguration</strong> — UE commanded to random access to target cell. Beam selection included.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(129,140,248,0.12);color:var(--c-nr);">4</div>
+        <div style="font-size:0.8rem;"><strong>Path Switch (AMF)</strong> — N2 path switch. UPF updated. Source gNB releases UE context.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════ S7: CHANNELS ═══════════════ -->
+<section id="s7" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">07 — CHANNELS</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">NR Channel & Signal Structure</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px;">
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-sub6);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">DOWNLINK</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);flex-shrink:0;">PDSCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Physical DL Shared Channel — user data (LDPC)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);flex-shrink:0;">PDCCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">DCI — scheduling grants, DCI formats 0_0–1_1</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);flex-shrink:0;">PBCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">MIB carried every 20 ms inside SSB</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);flex-shrink:0;">SSB</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);"><strong>New:</strong> PSS+SSS+PBCH+DMRS — beam scanning signal</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-sub6);flex-shrink:0;">CSI-RS</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Channel estimation, beam management, RRM</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">UPLINK</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-eMBB);flex-shrink:0;">PUSCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">UL data — CP-OFDM <em>and</em> DFT-s-OFDM (PAPR reduction)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-eMBB);flex-shrink:0;">PUCCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">UCI: HARQ-ACK, SR, CSI reports (Formats 0–4)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-eMBB);flex-shrink:0;">PRACH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">4-step or 2-step RACH (2-step from Rel-16)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-eMBB);flex-shrink:0;">DMRS</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Front-loaded DMRS (slot position 2 or 3) — faster demod</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-eMBB);flex-shrink:0;">SRS</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">UL sounding, beam management, reciprocity calibration</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SSB details -->
+  <div class="card" style="padding:20px 24px;border-left:3px solid var(--c-mmw);">
+    <div style="font-size:0.68rem;color:var(--c-mmw);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">SSB (SYNC SIGNAL BLOCK) — KEY NR CONCEPT</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;font-size:0.78rem;">
+      <div><div style="color:var(--text-muted);margin-bottom:4px;">Periodicity</div><div style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">20 ms (default)</div></div>
+      <div><div style="color:var(--text-muted);margin-bottom:4px;">Max beams FR1</div><div style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">8 SSBs/burst</div></div>
+      <div><div style="color:var(--text-muted);margin-bottom:4px;">Max beams FR2</div><div style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">64 SSBs/burst</div></div>
+      <div><div style="color:var(--text-muted);margin-bottom:4px;">Bandwidth</div><div style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">20 RBs (FR1)</div></div>
+      <div><div style="color:var(--text-muted);margin-bottom:4px;">Symbols</div><div style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">4 OFDM symbols</div></div>
+      <div><div style="color:var(--text-muted);margin-bottom:4px;">Purpose</div><div style="color:var(--text-secondary);">Cell search, beam selection, timing</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S8: QUICK REF ═══════════════ -->
+<section id="s8" class="reveal" style="padding:60px 0 80px;">
+  <div class="sec-num">08 — QUICK REFERENCE</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">Values & Parameters Cheatsheet</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-sub6);">
+      <div style="font-size:0.68rem;color:var(--c-sub6);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">NR BANDWIDTH (FR1)</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;"><span>5 / 10 / 15 / 20 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-sub6);">SCS 15/30 kHz</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>25 / 30 / 40 / 50 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-sub6);">SCS 15/30 kHz</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>60 / 70 / 80 / 90 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-sub6);">SCS 30 kHz</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:600;"><span>100 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-sub6);">Max FR1</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-mmw);">
+      <div style="font-size:0.68rem;color:var(--c-mmw);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">NR BANDWIDTH (FR2 mmWave)</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;"><span>50 / 100 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">SCS 60/120 kHz</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>200 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">SCS 60/120 kHz</span></div>
+        <div style="display:flex;justify-content:space-between;font-weight:600;"><span>400 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">Max FR2</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>CA aggregation</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-mmw);">Up to 8 CC</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-nr);">
+      <div style="font-size:0.68rem;color:var(--c-nr);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">RRC STATES (NR)</div>
+      <div style="display:flex;flex-direction:column;gap:7px;font-size:0.78rem;">
+        <div><span class="badge" style="background:rgba(129,140,248,0.12);color:var(--c-nr);">RRC_IDLE</span> — DRX, no context, paging monitored</div>
+        <div><span class="badge" style="background:rgba(129,140,248,0.12);color:var(--c-nr);">RRC_INACTIVE</span> — <strong>New in NR:</strong> context stored at gNB + AMF, fast resume</div>
+        <div><span class="badge" style="background:rgba(129,140,248,0.12);color:var(--c-nr);">RRC_CONNECTED</span> — Active session, fully scheduled</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);">INACTIVE enables faster resume (&lt; 10 ms) vs IDLE (~100 ms)</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-kpi);">
+      <div style="font-size:0.68nm;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:10px;font-size:0.68rem;">TIMING VALUES (µ=1, SCS 30 kHz)</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;"><span>Frame</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">10 ms</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Subframe</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">1 ms</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Slot</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">0.5 ms (14 symbols)</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Mini-slot</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">2 / 4 / 7 symbols</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>HARQ processes DL</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">16 (vs 8 in LTE)</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-eMBB);">
+      <div style="font-size:0.68rem;color:var(--c-eMBB);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">SLOT FORMATS (TDD)</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div><span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-eMBB);">DDDSU</span> Config-0: 5-slot period</div>
+        <div><span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-eMBB);">DDDSUDDSUU</span> Config-1: 10-slot</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">D=DL, U=UL, S=Special (mixed). Flexible per-symbol TDD allocation in Rel-15+.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-warn);">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">COMMON FAILURE CAUSES</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div style="display:flex;gap:6px;"><span style="color:var(--c-warn);">⚠</span><span>SSB detection failure → poor coverage / beam misalign</span></div>
+        <div style="display:flex;gap:6px;"><span style="color:var(--c-warn);">⚠</span><span>RACH failure → contention / insufficient PRACH resources</span></div>
+        <div style="display:flex;gap:6px;"><span style="color:var(--c-warn);">⚠</span><span>mmWave blockage → sudden link loss, beam failure</span></div>
+        <div style="display:flex;gap:6px;"><span style="color:var(--c-warn);">⚠</span><span>NSA anchor drop → both LTE and NR sessions lost</span></div>
+        <div style="display:flex;gap:6px;"><span style="color:var(--c-warn);">⚠</span><span>High PRB utilization → scheduler congestion, latency spike</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</div><!-- /max-width -->
+
+<footer style="background:rgba(0,0,0,0.4);border-top:1px solid var(--border-subtle);padding:36px 20px;text-align:center;">
+  <div style="max-width:700px;margin:0 auto;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.1em;margin-bottom:14px;">FURTHER READING</div>
+    <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+      <a href="https://www.3gpp.org/technologies/nr" target="_blank" style="background:rgba(129,140,248,0.08);border:1px solid rgba(129,140,248,0.2);color:var(--c-nr);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">3GPP NR Specs</a>
+      <a href="https://www.sharetechnote.com/html/5G/5G_Index.html" target="_blank" style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);color:var(--c-sub6);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">ShareTechNote 5G</a>
+      <a href="https://www.rfwireless-world.com/5G/5G-NR-tutorial.html" target="_blank" style="background:rgba(45,212,191,0.08);border:1px solid rgba(45,212,191,0.2);color:var(--c-mac);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">RF Wireless 5G</a>
+      <a href="https://www.techplayon.com/5g-nr-tutorial/" target="_blank" style="background:rgba(192,132,252,0.08);border:1px solid rgba(192,132,252,0.2);color:var(--c-mmw);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">TechPlayOn NR</a>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-muted);">🔖 5G NR in a Nutshell · Engineer's Quick Reference · 3GPP Rel-15 to Rel-17</div>
+  </div>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
+    html.classList.toggle('dark', !isDark);
+    html.classList.toggle('light', isDark);
+    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+  }
+
+  function scrollTo(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.07 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  const sections = ['hero','s1','s2','s3','s4','s5','s6','s7','s8'];
+  const dots = document.querySelectorAll('.toc-dot');
+  const tocObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = sections.indexOf(e.target.id);
+        dots.forEach((d,i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(id => { const el = document.getElementById(id); if (el) tocObs.observe(el); });
+</script>
+</body>
+</html>

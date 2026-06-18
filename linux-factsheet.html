@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Linux in a Nutshell – Engineer Edition</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: {
+    mono: ['JetBrains Mono','Fira Code','monospace'],
+    sans: ['Inter','system-ui','sans-serif']
+  }}}}
+</script>
+<style>
+:root {
+  --bg-primary:   #04080e;
+  --bg-card:      #0a1220;
+  --bg-card-hover:#0e1928;
+  --border-subtle: rgba(255,255,255,0.07);
+  --text-primary:  #dce8f8;
+  --text-secondary:#6e88a8;
+  --text-muted:    #3c5068;
+  /* Linux palette: amber kernel + teal fs + violet proc + green cmd */
+  --c-primary:   #f59e0b;
+  --c-secondary: #2dd4bf;
+  --c-accent:    #a78bfa;
+  --c-mac:       #34d399;
+  --c-kpi:       #facc15;
+  --c-warn:      #f87171;
+  --c-proc:      #fb923c;
+  --c-net:       #38bdf8;
+}
+.light {
+  --bg-primary:    #f5f0e8;
+  --bg-card:       #ffffff;
+  --bg-card-hover: #fffbf0;
+  --border-subtle: rgba(0,0,0,0.08);
+  --text-primary:  #1a1205;
+  --text-secondary:#5a4a2e;
+  --text-muted:    #a09070;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg-primary); color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.6; transition: background 0.3s, color 0.3s;
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: #2a1a08; border-radius: 10px; }
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 12px; transition: all 0.25s ease;
+}
+.card:hover { background: var(--bg-card-hover); transform: translateY(-2px); }
+.badge {
+  display: inline-block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 8px; border-radius: 4px;
+}
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.sec-num {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.63rem;
+  color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase;
+}
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(245,158,11,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,158,11,0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+[data-tip] { position: relative; cursor: help; }
+[data-tip]::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 6px);
+  left: 50%; transform: translateX(-50%); background: #0a0a0a;
+  color: #dce8f8; border: 1px solid rgba(245,158,11,0.3);
+  padding: 5px 10px; border-radius: 5px; font-size: 0.7rem;
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; z-index: 100; font-family: 'Inter', sans-serif;
+}
+[data-tip]:hover::after { opacity: 1; }
+#toc-panel {
+  position: fixed; left: 18px; top: 50%; transform: translateY(-50%);
+  z-index: 50; display: flex; flex-direction: column; gap: 8px;
+}
+.toc-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-muted); cursor: pointer; transition: all 0.2s; position: relative;
+}
+.toc-dot:hover, .toc-dot.active {
+  background: var(--c-primary); transform: scale(1.5);
+  box-shadow: 0 0 8px rgba(245,158,11,0.65);
+}
+.toc-dot::after {
+  content: attr(data-label); position: absolute; left: 18px; top: 50%;
+  transform: translateY(-50%); white-space: nowrap; font-size: 0.68rem;
+  color: var(--text-secondary); opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; background: var(--bg-card);
+  padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); z-index: 10;
+}
+.toc-dot:hover::after { opacity: 1; }
+#theme-btn {
+  position: fixed; top: 18px; right: 18px; z-index: 100;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  color: var(--text-secondary); padding: 7px 14px; border-radius: 20px;
+  font-size: 0.73rem; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: all 0.2s;
+}
+#theme-btn:hover { border-color: var(--c-primary); color: var(--c-primary); }
+.layer-row {
+  display: flex; align-items: stretch; border-radius: 8px;
+  overflow: hidden; border: 1px solid var(--border-subtle); margin-bottom: 6px;
+}
+.layer-label {
+  width: 96px; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; padding: 10px 8px; text-align: center;
+}
+.layer-content {
+  flex: 1; padding: 10px 14px; display: flex; align-items: center;
+  flex-wrap: wrap; gap: 6px; font-size: 0.78rem; color: var(--text-secondary);
+}
+.proc-step { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--border-subtle); }
+.proc-step:last-child { border-bottom: none; }
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+}
+.copy-btn {
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.25);
+  color: var(--c-primary); font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem; padding: 3px 8px; border-radius: 4px;
+  cursor: pointer; transition: all 0.2s; z-index: 5;
+}
+.copy-btn:hover { background: rgba(245,158,11,0.25); }
+.copy-btn.copied { color: #34d399; border-color: #34d399; background: rgba(52,211,153,0.12); }
+.cb {
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(245,158,11,0.14);
+  border-radius: 8px; font-size: 0.79rem;
+  padding: 16px; line-height: 1.9; position: relative;
+}
+.cm  { color: #4b6a4a; font-style: italic; }
+.kw  { color: #f59e0b; }
+.str { color: #86efac; }
+.cmd { color: #7dd3fc; }
+.fl  { color: #fde68a; }
+.hl  { color: #f9a8d4; }
+.grn { color: #34d399; }
+@media (max-width: 768px) { #toc-panel { display: none; } }
+@keyframes pulse { 0%,100%{opacity:1;}50%{opacity:0.4;} }
+</style>
+</head>
+<body>
+
+<button id="theme-btn" onclick="toggleTheme()">
+  <span id="theme-icon">☀️</span><span id="theme-label">Light</span>
+</button>
+
+<nav id="toc-panel" aria-label="Sections">
+  <div class="toc-dot active" data-label="Home"          onclick="ss('hero')"></div>
+  <div class="toc-dot"        data-label="Overview"      onclick="ss('s1')"></div>
+  <div class="toc-dot"        data-label="Architecture"  onclick="ss('s2')"></div>
+  <div class="toc-dot"        data-label="Filesystem"    onclick="ss('s3')"></div>
+  <div class="toc-dot"        data-label="Process Model" onclick="ss('s4')"></div>
+  <div class="toc-dot"        data-label="KPIs"          onclick="ss('s5')"></div>
+  <div class="toc-dot"        data-label="Procedures"    onclick="ss('s6')"></div>
+  <div class="toc-dot"        data-label="Commands"      onclick="ss('s7')"></div>
+  <div class="toc-dot"        data-label="Cheatsheet"    onclick="ss('s8')"></div>
+</nav>
+
+<!-- ═══════════════════════════ HERO ═══════════════════════════ -->
+<section id="hero" class="hero-grid min-h-screen flex flex-col items-center justify-center px-6 py-24 relative overflow-hidden">
+  <div style="position:absolute;top:5%;left:8%;width:540px;height:540px;background:radial-gradient(circle,rgba(245,158,11,0.07),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:8%;right:6%;width:380px;height:380px;background:radial-gradient(circle,rgba(45,212,191,0.06),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;top:45%;left:45%;width:600px;height:600px;background:radial-gradient(circle,rgba(167,139,250,0.04),transparent 65%);pointer-events:none;"></div>
+
+  <div class="text-center max-w-3xl relative z-10 reveal">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:20px;padding:4px 16px;margin-bottom:24px;">
+      <span style="width:6px;height:6px;background:var(--c-primary);border-radius:50%;animation:pulse 2s infinite;"></span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-primary);letter-spacing:0.1em;">UNIX-LIKE · OPEN SOURCE · ENGINEER EDITION</span>
+    </div>
+
+    <h1 style="font-size:clamp(2.4rem,7vw,4.4rem);font-weight:800;line-height:1.08;letter-spacing:-0.02em;margin-bottom:16px;">
+      <span style="color:var(--text-primary);">Linux</span>
+      <span style="background:linear-gradient(135deg,var(--c-primary),var(--c-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;"> Operating System</span><br>
+      <span style="color:var(--text-primary);">in a Nutshell</span>
+    </h1>
+    <p style="font-size:1rem;color:var(--text-secondary);max-width:630px;margin:0 auto 34px;">
+      A high-signal reference covering the kernel architecture, VFS, process & memory model, performance metrics, essential commands, and production administration workflows.
+    </p>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:30px;">
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--c-primary);">monolithic</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Kernel design with loadable modules</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--c-secondary);">PID 1</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">init / systemd — all processes descend</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--c-accent);">VFS</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Virtual Filesystem — everything is a file</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.35rem;font-weight:700;color:var(--c-kpi);">GPL v2</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Kernel licence since Torvalds 1991</div>
+      </div>
+    </div>
+
+    <button onclick="ss('s1')" style="background:var(--c-primary);color:#000;font-weight:700;font-size:0.82rem;padding:10px 28px;border-radius:8px;border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;">EXPLORE FACTSHEET ↓</button>
+  </div>
+</section>
+
+<div style="max-width:960px;margin:0 auto;padding:0 20px;">
+
+<!-- ═══════════════════════════ S1 OVERVIEW ═══════════════════════════ -->
+<section id="s1" class="reveal" style="padding:64px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 01</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Overview — Linux at a Glance</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Free, open-source Unix-like kernel + GNU userland. Powers 97% of the top 1M web servers, all top-500 supercomputers, Android, and most cloud infrastructure.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div class="card" style="padding:22px;border-left:3px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">KERNEL DESIGN</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:0.82rem;color:var(--text-secondary);">
+        <div><span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-primary);" data-tip="All subsystems run in a single kernel address space">Monolithic</span> — subsystems share kernel space; fast IPC</div>
+        <div><span class="badge" style="background:rgba(45,212,191,0.1);color:var(--c-secondary);" data-tip="Dynamically loadable kernel modules (.ko)">LKM</span> — loadable kernel modules extend without reboot</div>
+        <div><span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);" data-tip="Preemptible kernel since 2.6">Preemptive</span> — kernel itself is preemptible (CONFIG_PREEMPT)</div>
+        <div><span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);" data-tip="SMP with per-CPU data structures">SMP</span> — symmetric multiprocessing, NUMA-aware since 2.6</div>
+      </div>
+    </div>
+    <div class="card" style="padding:22px;border-left:3px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">UNIX PHILOSOPHY IN LINUX</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.82rem;color:var(--text-secondary);">
+        <div>🔧 <strong style="color:var(--text-primary);">Everything is a file</strong> — devices, sockets, pipes, /proc</div>
+        <div>🔗 <strong style="color:var(--text-primary);">Compose small tools</strong> — pipes, redirection, shell scripting</div>
+        <div>📝 <strong style="color:var(--text-primary);">Text streams</strong> — config, logs, and IPC via text</div>
+        <div>🔒 <strong style="color:var(--text-primary);">Least privilege</strong> — UID/GID + capabilities + namespaces</div>
+        <div>🧩 <strong style="color:var(--text-primary);">Silent on success</strong> — exit code 0 = OK, non-zero = error</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">MAJOR DISTRIBUTIONS</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.8;">
+        <span data-tip="Red Hat, CentOS, AlmaLinux, Rocky" style="color:var(--c-primary);font-family:'JetBrains Mono',monospace;">RHEL family</span> — RPM/dnf · enterprise<br>
+        <span data-tip="Ubuntu, Linux Mint, Pop!_OS" style="color:var(--c-secondary);font-family:'JetBrains Mono',monospace;">Debian family</span> — APT/dpkg · widespread<br>
+        <span data-tip="Rolling release, pacman" style="color:var(--c-accent);font-family:'JetBrains Mono',monospace;">Arch / Gentoo</span> — bleeding edge · DIY
+      </div>
+    </div>
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">KERNEL VERSIONS</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);">Versioned as <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">major.minor.patch</span> (e.g. <span style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);">6.8.0</span>). LTS kernels maintained 6 years. Check: <span style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">uname -r</span>. Stable release cycle ~9–10 weeks.</div>
+    </div>
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">RING ARCHITECTURE</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);">Ring 0 = <span style="color:var(--c-primary);font-family:'JetBrains Mono',monospace;">kernel space</span> (full HW access). Ring 3 = <span style="color:var(--c-secondary);font-family:'JetBrains Mono',monospace;">user space</span> (syscall to cross). Context switch cost ≈ 1–5 µs.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ S2 ARCHITECTURE ═══════════════════════════ -->
+<section id="s2" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 02</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Kernel Architecture</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Layered structure from hardware to userland applications — every user request descends through syscall, VFS, and driver subsystems.</p>
+
+  <div class="layer-row" style="background:rgba(245,158,11,0.03);">
+    <div class="layer-label" style="background:rgba(245,158,11,0.12);color:var(--c-primary);">User Space</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-primary);">Applications</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-primary);">Shell (bash/zsh)</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-primary);">GNU Coreutils</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-primary);">systemd (PID 1)</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-primary);">glibc</span>
+      <span style="color:var(--text-muted);font-size:0.74rem;">ring 3 · restricted HW access · communicates via syscalls</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(45,212,191,0.12);color:var(--c-secondary);">Syscall IF</div>
+    <div class="layer-content">
+      <span style="font-size:0.8rem;">Trap to ring 0 via <span class="badge" style="background:rgba(45,212,191,0.08);color:var(--c-secondary);" data-tip="x86-64 fast system call">SYSCALL / INT 0x80</span> instruction &nbsp;·&nbsp; ~400 syscalls (open, read, write, mmap, clone, execve…) &nbsp;·&nbsp; args in registers rdi/rsi/rdx/rcx/r8/r9</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(167,139,250,0.12);color:var(--c-accent);">VFS</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);" data-tip="Virtual Filesystem Switch — unified inode abstraction">Virtual FS</span>
+      <span style="font-size:0.8rem;">inode / dentry / file / super_block objects &nbsp;·&nbsp; translates to ext4/xfs/btrfs/tmpfs/procfs/sysfs</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(250,204,21,0.12);color:var(--c-kpi);">Memory Mgr</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="4-level page table on x86-64">Page Tables</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Translation Lookaside Buffer">TLB</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Buddy + Slab allocators">Slab/SLUB</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Out-of-Memory killer">OOM Killer</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);">mmap · huge pages · KSM</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(52,211,153,0.12);color:var(--c-mac);">Scheduler</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(52,211,153,0.08);color:var(--c-mac);" data-tip="Completely Fair Scheduler — O(log n) red-black tree">CFS</span>
+      <span class="badge" style="background:rgba(52,211,153,0.08);color:var(--c-mac);">RT (FIFO/RR)</span>
+      <span class="badge" style="background:rgba(52,211,52,0.08);color:var(--c-mac);">DEADLINE</span>
+      <span style="font-size:0.79rem;">time slice ≈ 0.75 ms (CONFIG_HZ=1000) · nice −20..+19 · cgroups v2 weight</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(56,189,248,0.12);color:var(--c-net);">Networking</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-net);">Socket layer</span>
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-net);">TCP/IP stack</span>
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-net);">Netfilter/iptables</span>
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-net);">eBPF</span>
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-net);">XDP</span>
+      <span style="font-size:0.79rem;">sk_buff (skb) as universal packet descriptor</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(248,113,113,0.12);color:var(--c-warn);">Drivers / HW</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);">Block drivers</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);">NIC drivers</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);">GPU drivers</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);">USB/PCIe bus</span>
+      <span style="font-size:0.79rem;">LKM (.ko) — loadable without reboot · udev hotplug</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ S3 FILESYSTEM ═══════════════════════════ -->
+<section id="s3" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 03</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Filesystem — FHS & Key Paths</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">The Filesystem Hierarchy Standard defines the single root <code style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);">/</code> tree. Everything — devices, processes, network sockets — is exposed as a file path.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;">
+    <div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(245,158,11,0.12);color:var(--c-primary);font-size:0.82rem;">/</div><div class="layer-content">Root of entire filesystem hierarchy — single mount point</div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(245,158,11,0.1);color:var(--c-primary);">/bin /sbin</div><div class="layer-content">Essential user &amp; admin binaries (<code style="color:var(--c-mac);">ls, cp, mount, ip</code>)</div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(245,158,11,0.1);color:var(--c-primary);">/usr</div><div class="layer-content">Secondary hierarchy — <code style="color:var(--c-mac);">/usr/bin</code>, <code style="color:var(--c-mac);">/usr/lib</code>, <code style="color:var(--c-mac);">/usr/share</code></div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(245,158,11,0.1);color:var(--c-primary);">/etc</div><div class="layer-content">System-wide config files — <code style="color:var(--c-mac);">fstab, passwd, sudoers, hosts, resolv.conf</code></div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(245,158,11,0.1);color:var(--c-primary);">/home</div><div class="layer-content">User home directories — <code style="color:var(--c-mac);">~</code> expands to <code style="color:var(--c-mac);">/home/&lt;user&gt;</code></div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(245,158,11,0.1);color:var(--c-primary);">/var</div><div class="layer-content">Variable data — <code style="color:var(--c-mac);">log, spool, cache, lib</code> — grows at runtime</div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(245,158,11,0.1);color:var(--c-primary);">/tmp</div><div class="layer-content">Ephemeral temp files — cleared on reboot; often tmpfs (RAM)</div></div>
+    </div>
+    <div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(167,139,250,0.12);color:var(--c-accent);">/proc</div><div class="layer-content"><span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">procfs</span> — kernel + process state as virtual files (<code style="color:var(--c-mac);">/proc/&lt;pid&gt;/</code>)</div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(167,139,250,0.1);color:var(--c-accent);">/sys</div><div class="layer-content"><span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">sysfs</span> — kernel objects, drivers, device attributes exported to userland</div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(167,139,250,0.1);color:var(--c-accent);">/dev</div><div class="layer-content">Device nodes — block (<code style="color:var(--c-mac);">sda</code>, <code style="color:var(--c-mac);">nvme0n1</code>), char (<code style="color:var(--c-mac);">tty, null, urandom</code>)</div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(56,189,248,0.12);color:var(--c-net);">/boot</div><div class="layer-content">Kernel image (<code style="color:var(--c-mac);">vmlinuz</code>), initrd/initramfs, GRUB config</div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(52,211,153,0.12);color:var(--c-mac);">/lib /lib64</div><div class="layer-content">Shared libraries (glibc, kernel modules in <code style="color:var(--c-mac);">/lib/modules/</code>)</div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(52,211,153,0.1);color:var(--c-mac);">/opt /srv</div><div class="layer-content">Optional 3rd-party packages (/opt) and service data (/srv)</div></div>
+      <div class="layer-row"><div class="layer-label" style="background:rgba(248,113,113,0.12);color:var(--c-warn);">/run</div><div class="layer-content">Runtime state (PIDs, sockets, tmpfs) — replaces /var/run since systemd</div></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+    <div class="card" style="padding:18px;border-top:2px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">FILE PERMISSIONS</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.74rem;">
+<div><span class="cm"># rwxr-xr-- = 754</span></div>
+<div><span class="kw">chmod</span> <span class="fl">755</span> script.sh</div>
+<div><span class="kw">chmod</span> <span class="str">u+x,g-w</span> file</div>
+<div><span class="kw">chown</span> user:group file</div>
+<div><span class="kw">umask</span> <span class="fl">022</span>  <span class="cm"># default 644/755</span></div>
+<div><span class="cm"># setuid bit: chmod 4755</span></div>
+<div><span class="cm"># sticky bit: chmod +t /tmp</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:18px;border-top:2px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">INODE & LINKS</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);">Every file = inode (metadata: size, uid, gid, perms, timestamps, block pointers). <span style="color:var(--c-secondary);font-family:'JetBrains Mono',monospace;">Hard link</span> — same inode, same partition. <span style="color:var(--c-accent);font-family:'JetBrains Mono',monospace;">Symlink</span> — separate inode pointing to path, crosses filesystems. <span style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">stat file</span> shows inode detail.</div>
+    </div>
+    <div class="card" style="padding:18px;border-top:2px solid var(--c-accent);">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">FS TYPES</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);">
+        <span data-tip="Most common Linux default" style="color:var(--c-primary);font-family:'JetBrains Mono',monospace;">ext4</span> — journal, 16 TiB max file<br>
+        <span data-tip="High-performance for databases" style="color:var(--c-secondary);font-family:'JetBrains Mono',monospace;">xfs</span> — 64-bit, parallel I/O<br>
+        <span data-tip="Copy-on-write, snapshots, RAID" style="color:var(--c-accent);font-family:'JetBrains Mono',monospace;">btrfs</span> — CoW, subvolumes, checksums<br>
+        <span data-tip="RAM-backed, ephemeral" style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">tmpfs</span> — in-memory, no persistence
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ S4 PROCESS MODEL ═══════════════════════════ -->
+<section id="s4" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 04</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Process & Memory Model</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Linux processes are the fundamental execution unit — each with its own virtual address space, file descriptors, and signal handlers. Threads share the same VAS.</p>
+
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(245,158,11,0.12);color:var(--c-primary);">fork/exec</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-primary);" data-tip="Creates a copy of the calling process via CoW page tables">fork()</span>
+      <span style="font-size:0.79rem;">→ child PID; CoW pages until write &nbsp;·&nbsp;</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-primary);" data-tip="Replaces process image — exec family of syscalls">execve()</span>
+      <span style="font-size:0.79rem;">→ load new program; preserves PID &nbsp;·&nbsp;</span>
+      <span class="badge" style="background:rgba(245,158,11,0.08);color:var(--c-primary);" data-tip="Lightweight thread creation — CLONE_VM | CLONE_FILES">clone()</span>
+      <span style="font-size:0.79rem;">→ threads (POSIX pthreads)</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(45,212,191,0.12);color:var(--c-secondary);">States</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(45,212,191,0.1);color:var(--c-secondary);" data-tip="On CPU run queue">R Running</span>
+      <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-mac);" data-tip="Asleep, interruptible">S Sleeping</span>
+      <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);" data-tip="Uninterruptible I/O wait — shows in top">D Disk Wait</span>
+      <span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);" data-tip="Stopped by signal (SIGSTOP/SIGTSTP)">T Stopped</span>
+      <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);" data-tip="Exited, waiting for parent wait()">Z Zombie</span>
+      <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-net);" data-tip="Idle kernel thread">I Idle</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(167,139,250,0.12);color:var(--c-accent);">VAS Layout</div>
+    <div class="layer-content">
+      <span style="font-size:0.79rem;">Low → High: </span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">text</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">data</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">bss</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">heap ↑</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-muted);">···</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">↓ stack</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">mmap region</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">vDSO</span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">kernel</span>
+      <span style="font-size:0.74rem;color:var(--text-muted);">ASLR randomises base addrs</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(250,204,21,0.12);color:var(--c-kpi);">Signals</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Terminate (catchable)">SIGTERM 15</span>
+      <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);" data-tip="Kill immediately (uncatchable)">SIGKILL 9</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Ctrl-C">SIGINT 2</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Reload config — nginx/sshd">SIGHUP 1</span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);" data-tip="Child process state changed">SIGCHLD 17</span>
+      <span class="badge" style="background:rgba(52,211,153,0.08);color:var(--c-mac);" data-tip="User-defined signal 1">SIGUSR1 10</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(56,189,248,0.12);color:var(--c-net);">cgroups v2</div>
+    <div class="layer-content">
+      <span style="font-size:0.79rem;">Hierarchical resource accounting &amp; limits: </span>
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-net);">cpu.max</span>
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-net);">memory.max</span>
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-net);">blkio</span>
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-net);">pids.max</span>
+      <span style="font-size:0.74rem;color:var(--text-muted);">Foundation of Docker/containerd/systemd slices</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(248,113,113,0.12);color:var(--c-warn);">Namespaces</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="Process ID isolation">pid</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="Network stack isolation">net</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="Filesystem root isolation">mnt</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="Hostname isolation">uts</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="IPC isolation">ipc</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="User/group ID remapping">user</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="cgroup namespace">cgroup</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="Time namespace">time</span>
+      <span style="font-size:0.74rem;color:var(--text-muted);">= container isolation primitives</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ S5 KPIs ═══════════════════════════ -->
+<section id="s5" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 05</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">System KPIs & Performance Metrics</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Key observability metrics — what to monitor, healthy targets, and which tools report them.</p>
+
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border-subtle);">
+      <thead>
+        <tr style="background:rgba(250,204,21,0.06);border-bottom:2px solid rgba(250,204,21,0.18);">
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">METRIC</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">HEALTHY TARGET</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">WARNING THRESHOLD</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">TOOL / FILE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>CPU Load Average (1m)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&lt; nCPU</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 2× nCPU</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">uptime · /proc/loadavg · top</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>CPU %idle</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&gt; 20%</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; 5% sustained</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">mpstat -P ALL 1 · /proc/stat</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Memory Used %</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&lt; 80%</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 90% + swap active</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">free -h · /proc/meminfo · vmstat</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Swap In/Out rate</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">0 KB/s</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 100 KB/s</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">vmstat 1 (si/so cols) · sar -W</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Disk I/O await (ms)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&lt; 10 ms SSD / &lt;20 HDD</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 100 ms</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">iostat -x 1 · /proc/diskstats</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Disk %util</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&lt; 70%</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 90% sustained</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">iostat -x (last %util col)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Open file descriptors</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&lt; 80% of limit</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">EMFILE errors</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">lsof | wc -l · /proc/sys/fs/file-nr</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Network RX/TX errors</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">0</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">any non-zero trend</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">ip -s link · /proc/net/dev · ethtool</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Context switches/s</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&lt; 100k/s</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 500k/s</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">vmstat 1 (cs col) · perf stat</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>OOM kill events</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">0</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">any occurrence</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">dmesg | grep -i oom · journalctl -k</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ S6 PROCEDURES ═══════════════════════════ -->
+<section id="s6" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 06</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Administration Workflows</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Boot sequence and systemd service management — the two most critical operational workflows.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">LINUX BOOT SEQUENCE</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(245,158,11,0.12);color:var(--c-primary);">1</div>
+        <div style="font-size:0.8rem;"><strong>BIOS/UEFI POST</strong> — hardware initialisation, finds boot device, loads bootloader (GRUB2) from MBR/EFI partition.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(245,158,11,0.12);color:var(--c-primary);">2</div>
+        <div style="font-size:0.8rem;"><strong>GRUB2</strong> — loads <code style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">vmlinuz</code> kernel + <code style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">initramfs</code> into RAM. Passes kernel cmdline (root=, quiet, ro).</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(245,158,11,0.12);color:var(--c-primary);">3</div>
+        <div style="font-size:0.8rem;"><strong>Kernel init</strong> — decompresses, detects hardware, mounts initramfs as <code style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">/</code>, loads essential drivers, pivots to real root fs.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(245,158,11,0.12);color:var(--c-primary);">4</div>
+        <div style="font-size:0.8rem;"><strong>systemd (PID 1)</strong> — reads <code style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">/etc/systemd/system/</code> units, resolves dependency graph, activates default.target in parallel. <code style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">systemd-analyze blame</code> shows slowest units.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">SYSTEMD SERVICE MANAGEMENT</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(45,212,191,0.12);color:var(--c-secondary);">1</div>
+        <div style="font-size:0.8rem;"><strong>Inspect state</strong> — <code style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">systemctl status nginx</code> shows active/failed, PID, log tail. <code style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">journalctl -u nginx -f</code> follows live logs.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(45,212,191,0.12);color:var(--c-secondary);">2</div>
+        <div style="font-size:0.8rem;"><strong>Start / stop / reload</strong> — <code style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">systemctl start|stop|restart|reload nginx</code>. Use <code style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">reload</code> (SIGHUP) where supported to avoid downtime.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(45,212,191,0.12);color:var(--c-secondary);">3</div>
+        <div style="font-size:0.8rem;"><strong>Enable / disable on boot</strong> — <code style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">systemctl enable --now nginx</code> creates symlink in <code style="color:var(--c-mac);">wants/</code> and starts immediately. <code style="color:var(--c-mac);">mask</code> prevents accidental start.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(45,212,191,0.12);color:var(--c-secondary);">4</div>
+        <div style="font-size:0.8rem;"><strong>Write a unit file</strong> — drop <code style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">/etc/systemd/system/myapp.service</code> with <code style="color:var(--c-mac);">[Unit] [Service] [Install]</code> sections. <code style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">systemctl daemon-reload</code> then enable.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════ S7 COMMANDS ═══════════════════════════ -->
+<section id="s7" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 07</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Essential Commands Reference</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Core commands grouped by function — the daily toolkit of any Linux engineer.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">FILES, SEARCH & PIPES</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="find / -name '*.log' -mtime +7">find</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Recursive file search by name, type, time, size, perms</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="grep -rn 'pattern' /etc/">grep</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Pattern search; <code style="font-family:'JetBrains Mono',monospace;">-r</code> recursive, <code>-i</code> case, <code>-v</code> invert</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="awk '{print $1,$3}' file">awk</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Column extraction &amp; transformation — essential for log parsing</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="sed 's/old/new/g' file">sed</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Stream editor — in-place substitution, line delete, insert</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="sort | uniq -c | sort -rn">sort/uniq</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Sort and deduplicate — combine with awk for frequency tables</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(245,158,11,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="xargs -P 4 -I{} cmd {}">xargs</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Convert stdin to arguments; <code style="font-family:'JetBrains Mono',monospace;">-P n</code> parallel execution</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">PROCESS & PERFORMANCE</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(45,212,191,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="top -b -n1 or htop">top / htop</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Live CPU/MEM per-process; htop adds sorting, tree, kill UI</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(45,212,191,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="ps aux | grep nginx">ps</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Snapshot of processes — <code>aux</code> all users, <code>-ef</code> full, <code>--forest</code> tree</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(45,212,191,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="strace -p PID -e trace=network">strace</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Trace syscalls in real time — diagnose hangs, I/O issues</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(45,212,191,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="lsof -p PID or lsof -i :80">lsof</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">List open files &amp; sockets per process — debug FD leaks</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(45,212,191,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="iostat -x 1 3">iostat</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Block device I/O stats — await, %util, rkB/s, wkB/s per disk</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(45,212,191,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="perf stat -a sleep 5">perf</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Hardware counters, CPU cycles, cache misses, branch mispred</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-net);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">NETWORKING</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-net);flex-shrink:0;" data-tip="ip addr / ip route / ip link">ip</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Modern iproute2 — replaces ifconfig/route. addr, link, route, neigh</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-net);flex-shrink:0;" data-tip="ss -tulnp">ss</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Socket statistics — replaces netstat; faster, more detail</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-net);flex-shrink:0;" data-tip="tcpdump -i eth0 port 80 -w cap.pcap">tcpdump</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Packet capture — combine with <code>-A</code> (ASCII) or Wireshark</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-net);flex-shrink:0;" data-tip="curl -v -o /dev/null https://host">curl</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">HTTP testing — <code>-v</code> verbose, <code>-I</code> headers, <code>-d</code> POST body, <code>-k</code> insecure</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-net);flex-shrink:0;" data-tip="nftables / iptables -L -nv">nft / iptables</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Packet filtering — nftables is the modern replacement for iptables</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">STORAGE & USERS</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="df -hT && du -sh /var/log/*">df / du</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">df = per-mount usage; du = per-dir size; <code>ncdu</code> for interactive</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="lsblk -f && blkid">lsblk</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Block device tree — shows NAME, SIZE, TYPE, MOUNTPOINT, UUID</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="rsync -avz --delete src/ user@host:dst/">rsync</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Efficient incremental copy — <code>-z</code> compress, <code>--delete</code> mirror</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="useradd -m -s /bin/bash -G sudo user">useradd</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Add user; <code>usermod -aG</code> add to group; <code>visudo</code> for sudoers</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="journalctl -u sshd --since '1 hour ago'">journalctl</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Query systemd journal — <code>-k</code> kernel, <code>-b</code> current boot, <code>-p err</code></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════ S8 CHEATSHEET ═══════════════════════════ -->
+<section id="s8" class="reveal" style="padding:48px 0 48px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 08</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Values Cheatsheet</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Quick-reference cards — file permissions, bash scripting, /proc key files, systemd unit skeleton, networking one-liners, and signal quick-ref.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">FILE PERMISSIONS MATRIX</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.77rem;">
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid var(--border-subtle);padding:3px 0;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">Octal</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">Symbolic</span><span style="color:var(--text-muted);">Meaning</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);"><span style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);">777</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-primary);">rwxrwxrwx</span><span style="color:var(--text-muted);">all access</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);"><span style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">755</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">rwxr-xr-x</span><span style="color:var(--text-muted);">executables</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);"><span style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">644</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">rw-r--r--</span><span style="color:var(--text-muted);">config files</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);"><span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);">600</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);">rw-------</span><span style="color:var(--text-muted);">SSH keys</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);"><span style="font-family:'JetBrains Mono',monospace;color:var(--c-warn);">4755</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-warn);">rwsr-xr-x</span><span style="color:var(--text-muted);">setuid (su/sudo)</span></div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;"><span style="font-family:'JetBrains Mono',monospace;color:var(--c-warn);">1777</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-warn);">rwxrwxrwt</span><span style="color:var(--text-muted);">/tmp sticky</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">BASH SCRIPT TEMPLATE</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.74rem;">
+<div><span class="str">#!/usr/bin/env bash</span></div>
+<div><span class="kw">set</span> -euo pipefail</div>
+<div><span class="cm"># -e exit on error, -u undef var = err</span></div>
+<div><span class="cm"># -o pipefail  pipe fails on any cmd</span></div>
+<div>&nbsp;</div>
+<div><span class="kw">readonly</span> SCRIPT_DIR=<span class="str">$(cd "$(dirname "$0")" &amp;&amp; pwd)</span></div>
+<div>&nbsp;</div>
+<div><span class="cmd">log</span>() { <span class="fl">echo</span> <span class="str">"[$(date +%T)] $*"</span> &gt;&amp;2; }</div>
+<div><span class="cmd">die</span>() { <span class="cmd">log</span> <span class="str">"ERROR: $*"</span>; <span class="kw">exit</span> <span class="hl">1</span>; }</div>
+<div>&nbsp;</div>
+<div><span class="kw">main</span>() {</div>
+<div>  [[ <span class="fl">$#</span> -lt <span class="hl">1</span> ]] &amp;&amp; <span class="cmd">die</span> <span class="str">"Usage: $0 &lt;arg&gt;"</span></div>
+<div>  <span class="cmd">log</span> <span class="str">"Starting with arg=$1"</span></div>
+<div>}</div>
+<div><span class="kw">main</span> <span class="str">"$@"</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-accent);">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">KEY /proc FILES</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div style="display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);flex-shrink:0;">/proc/cpuinfo</span><span style="color:var(--text-secondary);">CPU model, cores, flags</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);flex-shrink:0;">/proc/meminfo</span><span style="color:var(--text-secondary);">MemTotal, MemFree, Cached, Buffers</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);flex-shrink:0;">/proc/net/tcp</span><span style="color:var(--text-secondary);">TCP socket table (hex encoded)</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);flex-shrink:0;">/proc/&lt;pid&gt;/fd/</span><span style="color:var(--text-secondary);">Symlinks to every open FD of a process</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;border-bottom:1px solid var(--border-subtle);padding-bottom:4px;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);flex-shrink:0;">/proc/&lt;pid&gt;/maps</span><span style="color:var(--text-secondary);">Virtual memory map of a process</span>
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);flex-shrink:0;">/proc/sys/</span><span style="color:var(--text-secondary);">Tunable kernel params (sysctl mirror)</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-kpi);">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">SYSTEMD UNIT SKELETON</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.73rem;">
+<div><span class="cm"># /etc/systemd/system/myapp.service</span></div>
+<div><span class="kw">[Unit]</span></div>
+<div>Description=My Application</div>
+<div>After=network.target</div>
+<div>&nbsp;</div>
+<div><span class="kw">[Service]</span></div>
+<div>Type=simple</div>
+<div>User=myuser</div>
+<div>WorkingDirectory=<span class="str">/opt/myapp</span></div>
+<div>ExecStart=<span class="cmd">/opt/myapp/bin/server</span></div>
+<div>Restart=on-failure</div>
+<div>RestartSec=5s</div>
+<div>StandardOutput=journal</div>
+<div>StandardError=journal</div>
+<div>&nbsp;</div>
+<div><span class="kw">[Install]</span></div>
+<div>WantedBy=multi-user.target</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-net);">
+      <div style="font-size:0.68rem;color:var(--c-net);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">NETWORKING ONE-LINERS</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.73rem;">
+<div><span class="cm"># who is listening on port 443</span></div>
+<div><span class="cmd">ss</span> -tulnp | grep <span class="fl">:443</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># capture 50 packets on eth0</span></div>
+<div><span class="cmd">tcpdump</span> -i eth0 -c50 -w /tmp/cap.pcap</div>
+<div>&nbsp;</div>
+<div><span class="cm"># check DNS resolution chain</span></div>
+<div><span class="cmd">dig</span> +trace example.com @8.8.8.8</div>
+<div>&nbsp;</div>
+<div><span class="cm"># test TCP connectivity</span></div>
+<div><span class="cmd">nc</span> -zv 10.0.0.1 22</div>
+<div>&nbsp;</div>
+<div><span class="cm"># route to destination</span></div>
+<div><span class="cmd">ip</span> route get 1.1.1.1</div>
+<div>&nbsp;</div>
+<div><span class="cm"># live bandwidth per interface</span></div>
+<div><span class="cmd">sar</span> -n DEV 1 5</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-warn);">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">SYSCTL PERFORMANCE TUNING</div>
+      <div style="position:relative;"><button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="cb" style="font-size:0.73rem;">
+<div><span class="cm"># TCP tuning for high concurrency</span></div>
+<div><span class="cmd">sysctl</span> -w net.core.somaxconn=<span class="fl">65535</span></div>
+<div><span class="cmd">sysctl</span> -w net.ipv4.tcp_max_syn_backlog=<span class="fl">65535</span></div>
+<div><span class="cmd">sysctl</span> -w net.ipv4.tcp_fin_timeout=<span class="fl">15</span></div>
+<div><span class="cmd">sysctl</span> -w net.ipv4.tcp_tw_reuse=<span class="fl">1</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># VM memory pressure</span></div>
+<div><span class="cmd">sysctl</span> -w vm.swappiness=<span class="fl">10</span>    <span class="cm"># reduce swap</span></div>
+<div><span class="cmd">sysctl</span> -w vm.dirty_ratio=<span class="fl">15</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># persist in /etc/sysctl.d/99-tune.conf</span></div>
+<div><span class="cmd">sysctl</span> --system</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</div><!-- /container -->
+
+<footer style="background:rgba(0,0,0,0.4);border-top:1px solid var(--border-subtle);padding:36px 20px;text-align:center;margin-top:32px;">
+  <div style="max-width:700px;margin:0 auto;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.1em;margin-bottom:14px;">FURTHER READING</div>
+    <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+      <a href="https://www.kernel.org/doc/html/latest/" target="_blank" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">Kernel Docs</a>
+      <a href="https://www.brendangregg.com/linuxperf.html" target="_blank" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">Brendan Gregg Perf</a>
+      <a href="https://www.freedesktop.org/software/systemd/man/systemd.service.html" target="_blank" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">systemd unit(5)</a>
+      <a href="https://refspecs.linuxfoundation.org/fhs.shtml" target="_blank" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">FHS Standard</a>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-muted);">🐧 Linux in a Nutshell · Engineer Reference · Kernel 6.x · systemd · GPL v2</div>
+  </div>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const h = document.documentElement;
+    const d = h.classList.contains('dark');
+    h.classList.toggle('dark', !d); h.classList.toggle('light', d);
+    document.getElementById('theme-icon').textContent = d ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = d ? 'Dark' : 'Light';
+  }
+  function ss(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  const obs = new IntersectionObserver(
+    entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }),
+    { threshold: 0.07 }
+  );
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+
+  const sections = ['hero','s1','s2','s3','s4','s5','s6','s7','s8'];
+  const dots = document.querySelectorAll('.toc-dot');
+  const tObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const i = sections.indexOf(e.target.id);
+        if (i >= 0) dots.forEach((d, j) => d.classList.toggle('active', i === j));
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(id => { const el = document.getElementById(id); if (el) tObs.observe(el); });
+
+  function copyBlock(btn) {
+    const block = btn.nextElementSibling;
+    navigator.clipboard.writeText(block.innerText.trim()).then(() => {
+      btn.textContent = 'copied!'; btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+</script>
+</body>
+</html>

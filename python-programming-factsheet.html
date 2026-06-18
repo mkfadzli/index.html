@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python Programming in a Nutshell – Engineer Edition</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: {
+    mono: ['JetBrains Mono','Fira Code','monospace'],
+    sans: ['Inter','system-ui','sans-serif']
+  }}}}
+</script>
+<style>
+:root {
+  --bg-primary:   #04080e;
+  --bg-card:      #0a1220;
+  --bg-card-hover:#0e1928;
+  --border-subtle: rgba(255,255,255,0.07);
+  --text-primary:  #dce8f8;
+  --text-secondary:#6e88a8;
+  --text-muted:    #3c5068;
+  --c-primary:  #3b82f6;
+  --c-secondary:#10b981;
+  --c-accent:   #8b5cf6;
+  --c-mac:      #2dd4bf;
+  --c-kpi:      #facc15;
+  --c-warn:     #f87171;
+  --c-proc:     #fb923c;
+  --c-str:      #34d399;
+  --c-kw:       #93c5fd;
+  --c-fn:       #fde68a;
+  --c-comment:  #4b6a8a;
+}
+.light {
+  --bg-primary:    #edf2f9;
+  --bg-card:       #ffffff;
+  --bg-card-hover: #f4f8ff;
+  --border-subtle: rgba(0,0,0,0.08);
+  --text-primary:  #0e1c2e;
+  --text-secondary:#3d5880;
+  --text-muted:    #90a8c0;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg-primary); color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.6; transition: background 0.3s, color 0.3s;
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: #1a2a40; border-radius: 10px; }
+
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 12px; transition: all 0.25s ease;
+}
+.card:hover { background: var(--bg-card-hover); transform: translateY(-2px); }
+
+.badge {
+  display: inline-block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 8px; border-radius: 4px;
+}
+
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+.sec-num {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.63rem;
+  color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+[data-tip] { position: relative; cursor: help; }
+[data-tip]::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 6px);
+  left: 50%; transform: translateX(-50%); background: #0a1220;
+  color: #dce8f8; border: 1px solid rgba(59,130,246,0.3);
+  padding: 5px 10px; border-radius: 5px; font-size: 0.7rem;
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; z-index: 100; font-family: 'Inter', sans-serif;
+}
+[data-tip]:hover::after { opacity: 1; }
+
+#toc-panel {
+  position: fixed; left: 18px; top: 50%; transform: translateY(-50%);
+  z-index: 50; display: flex; flex-direction: column; gap: 8px;
+}
+.toc-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-muted); cursor: pointer; transition: all 0.2s; position: relative;
+}
+.toc-dot:hover, .toc-dot.active {
+  background: var(--c-primary); transform: scale(1.5);
+  box-shadow: 0 0 8px rgba(59,130,246,0.65);
+}
+.toc-dot::after {
+  content: attr(data-label); position: absolute; left: 18px; top: 50%;
+  transform: translateY(-50%); white-space: nowrap; font-size: 0.68rem;
+  color: var(--text-secondary); opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; background: var(--bg-card);
+  padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); z-index: 10;
+}
+.toc-dot:hover::after { opacity: 1; }
+
+#theme-btn {
+  position: fixed; top: 18px; right: 18px; z-index: 100;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  color: var(--text-secondary); padding: 7px 14px; border-radius: 20px;
+  font-size: 0.73rem; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: all 0.2s;
+}
+#theme-btn:hover { border-color: var(--c-primary); color: var(--c-primary); }
+
+.layer-row {
+  display: flex; align-items: stretch; border-radius: 8px;
+  overflow: hidden; border: 1px solid var(--border-subtle); margin-bottom: 6px;
+}
+.layer-label {
+  width: 96px; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; padding: 10px 8px; text-align: center;
+}
+.layer-content { flex: 1; padding: 10px 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); }
+
+.proc-step { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--border-subtle); }
+.proc-step:last-child { border-bottom: none; }
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+}
+
+.copy-btn {
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.25);
+  color: var(--c-primary); font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all 0.2s; z-index: 5;
+}
+.copy-btn:hover { background: rgba(59,130,246,0.25); }
+.copy-btn.copied { color: #34d399; border-color: #34d399; background: rgba(52,211,153,0.12); }
+
+.code-block {
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(59,130,246,0.15);
+  border-radius: 8px; font-size: 0.8rem;
+  padding: 16px; line-height: 1.85;
+  position: relative;
+}
+.kw  { color: var(--c-kw); }
+.fn  { color: var(--c-fn); }
+.str { color: var(--c-str); }
+.cm  { color: var(--c-comment); font-style: italic; }
+.num { color: #f9a8d4; }
+.op  { color: var(--c-proc); }
+
+@media (max-width: 768px) { #toc-panel { display: none; } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+</style>
+</head>
+<body>
+
+<!-- Theme Toggle -->
+<button id="theme-btn" onclick="toggleTheme()">
+  <span id="theme-icon">☀️</span>
+  <span id="theme-label">Light</span>
+</button>
+
+<!-- Floating TOC -->
+<nav id="toc-panel" aria-label="Sections">
+  <div class="toc-dot active" data-label="Home"         onclick="scrollToSec('hero')"></div>
+  <div class="toc-dot"        data-label="Overview"     onclick="scrollToSec('s1')"></div>
+  <div class="toc-dot"        data-label="Architecture" onclick="scrollToSec('s2')"></div>
+  <div class="toc-dot"        data-label="Core Syntax"  onclick="scrollToSec('s3')"></div>
+  <div class="toc-dot"        data-label="Data Model"   onclick="scrollToSec('s4')"></div>
+  <div class="toc-dot"        data-label="Performance"  onclick="scrollToSec('s5')"></div>
+  <div class="toc-dot"        data-label="Patterns"     onclick="scrollToSec('s6')"></div>
+  <div class="toc-dot"        data-label="Stdlib"       onclick="scrollToSec('s7')"></div>
+  <div class="toc-dot"        data-label="Cheatsheet"   onclick="scrollToSec('s8')"></div>
+</nav>
+
+<!-- HERO -->
+<section id="hero" class="hero-grid min-h-screen flex flex-col items-center justify-center px-6 py-24 relative overflow-hidden">
+  <div style="position:absolute;top:8%;left:10%;width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,0.07),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:8%;right:8%;width:350px;height:350px;background:radial-gradient(circle,rgba(16,185,129,0.06),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:700px;height:700px;background:radial-gradient(circle,rgba(139,92,246,0.04),transparent 65%);pointer-events:none;"></div>
+
+  <div class="text-center max-w-3xl relative z-10 reveal">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.22);border-radius:20px;padding:4px 16px;margin-bottom:24px;">
+      <span style="width:6px;height:6px;background:var(--c-primary);border-radius:50%;animation:pulse 2s infinite;"></span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-primary);letter-spacing:0.1em;">GENERAL PURPOSE · INTERPRETED · ENGINEER EDITION</span>
+    </div>
+
+    <h1 style="font-size:clamp(2.2rem,6vw,4rem);font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:16px;">
+      <span style="color:var(--text-primary);">Python</span>
+      <span style="background:linear-gradient(135deg,var(--c-primary),var(--c-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;"> Programming</span><br>
+      <span style="color:var(--text-primary);">in a Nutshell</span>
+    </h1>
+    <p style="font-size:1rem;color:var(--text-secondary);max-width:620px;margin:0 auto 32px;">
+      A high-signal reference for Python 3 — language model, data types, OOP, async, performance patterns, standard library, and packaging. From syntax fundamentals to production-grade idioms.
+    </p>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;">
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--c-primary);">CPython</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Reference interpreter in C</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--c-secondary);">GIL</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Global Interpreter Lock</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--c-accent);">PEP 8</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Style guide — 4-space indent</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.4rem;font-weight:700;color:var(--c-kpi);">3.12+</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Current stable release line</div>
+      </div>
+    </div>
+
+    <button onclick="scrollToSec('s1')" style="background:var(--c-primary);color:#fff;font-weight:700;font-size:0.82rem;padding:10px 28px;border-radius:8px;border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;">EXPLORE FACTSHEET ↓</button>
+  </div>
+</section>
+
+<div style="max-width:960px;margin:0 auto;padding:0 20px;">
+
+<!-- S1 Overview -->
+<section id="s1" class="reveal" style="padding:64px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 01</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Overview — Python at a Glance</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Dynamically typed, garbage-collected, interpreted language with a vast standard library and ecosystem. Philosophy: readability counts, explicit is better than implicit.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div class="card" style="padding:22px;border-left:3px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">LANGUAGE CHARACTERISTICS</div>
+      <div style="display:flex;flex-direction:column;gap:6px;font-size:0.82rem;color:var(--text-secondary);">
+        <div><span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);" data-tip="Type checked at runtime, not compile time">Dynamic typing</span> — types resolved at runtime; <code style="font-family:'JetBrains Mono',monospace;color:var(--c-str);">type(x)</code> always valid</div>
+        <div><span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);" data-tip="Reference counting + cyclic GC">GC</span> — reference counting with cyclic garbage collector</div>
+        <div><span class="badge" style="background:rgba(139,92,246,0.1);color:var(--c-accent);" data-tip="Duck typing — if it quacks...">Duck typing</span> — structural compatibility, not nominal</div>
+        <div><span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);" data-tip="Everything is an object including functions, classes, modules">Everything object</span> — ints, functions, classes all are objects</div>
+      </div>
+    </div>
+    <div class="card" style="padding:22px;border-left:3px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">KEY DESIGN PHILOSOPHY (PEP 20)</div>
+      <div style="position:relative;">
+        <div class="code-block" style="font-size:0.75rem;">
+          <div><span class="cm"># import this</span></div>
+          <div><span class="str">"Beautiful is better than ugly."</span></div>
+          <div><span class="str">"Explicit is better than implicit."</span></div>
+          <div><span class="str">"Simple is better than complex."</span></div>
+          <div><span class="str">"Readability counts."</span></div>
+          <div><span class="str">"Errors should never pass silently."</span></div>
+          <div><span class="str">"There should be one obvious way."</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">PRIMARY USE CASES</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);line-height:1.7;">
+        Data science / ML &nbsp;·&nbsp; Web backends (Django, FastAPI) &nbsp;·&nbsp; Automation / scripting &nbsp;·&nbsp; Network tools &nbsp;·&nbsp; DevOps / cloud tooling &nbsp;·&nbsp; Desktop GUIs (tkinter, PyQt)
+      </div>
+    </div>
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">EXECUTION MODEL</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);">Source <code style="color:var(--c-kw);">.py</code> → CPython compiles to <code style="color:var(--c-fn);">.pyc</code> bytecode → executed by PVM (Python Virtual Machine). No AOT compile step; JIT available via PyPy.</div>
+    </div>
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">VERSION POLICY</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);">Annual October release cadence. <span data-tip="Python 3.12 — free-threaded mode preview" style="color:var(--c-kpi);font-family:'JetBrains Mono',monospace;">3.12</span> — GIL opt-out (PEP 703). <span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">3.x</span> only; Python 2 EOL Jan 2020.</div>
+    </div>
+  </div>
+</section>
+
+<!-- S2 Architecture / Runtime -->
+<section id="s2" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 02</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Runtime Architecture</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">How CPython transforms source code to execution — and the role of the GIL, memory manager, and import system.</p>
+
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(59,130,246,0.12);color:var(--c-primary);">Source</div>
+    <div class="layer-content"><code style="color:var(--c-str);">.py</code> file → <strong>tokenizer</strong> → AST (Abstract Syntax Tree) → <span class="badge" style="background:rgba(59,130,246,0.08);color:var(--c-primary);">ast.parse()</span> → inspectable at runtime</div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(16,185,129,0.12);color:var(--c-secondary);">Compile</div>
+    <div class="layer-content">AST → <strong>compiler</strong> → bytecode (<code style="color:var(--c-fn);">.pyc</code> in <code>__pycache__</code>) → inspectable with <span class="badge" style="background:rgba(16,185,129,0.08);color:var(--c-secondary);">dis.dis()</span></div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(139,92,246,0.12);color:var(--c-accent);">PVM</div>
+    <div class="layer-content">Python Virtual Machine — stack-based bytecode interpreter. Each thread holds a <span class="badge" style="background:rgba(139,92,246,0.08);color:var(--c-accent);" data-tip="Global Interpreter Lock — one thread runs Python bytecode at a time">GIL</span>. CPython switches threads every 5 ms (sys.getswitchinterval)</div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(250,204,21,0.12);color:var(--c-kpi);">Memory</div>
+    <div class="layer-content"><strong>pymalloc</strong> arena allocator → object-specific allocators (<code>int</code> pool, <code>float</code> pool) → <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);">refcount + gc</span> for cycle detection</div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(248,113,113,0.12);color:var(--c-warn);">Import</div>
+    <div class="layer-content"><code style="color:var(--c-kw);">import</code> → checks <code>sys.modules</code> cache first → searches <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);">sys.path</span> → built-ins → frozen → <code>.pth</code> → site-packages</div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(251,146,60,0.12);color:var(--c-proc);">C Ext</div>
+    <div class="layer-content">C extensions (<code>.so</code>/<code>.pyd</code>) loaded via <code>ctypes</code> / <code>cffi</code> / CPython C API. NumPy, pandas, cryptography etc. bypass PVM for hot loops — <span class="badge" style="background:rgba(251,146,60,0.08);color:var(--c-proc);">GIL released</span> during I/O & C code</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:16px;">
+    <div class="card" style="padding:18px;border-top:2px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">THREADING vs MULTIPROCESSING</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);">GIL blocks true CPU parallelism in threads. Use <code style="color:var(--c-kw);">threading</code> for I/O-bound; <code style="color:var(--c-fn);">multiprocessing</code> for CPU-bound (separate GIL per process).</div>
+    </div>
+    <div class="card" style="padding:18px;border-top:2px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">ASYNCIO EVENT LOOP</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);">Single-thread coroutine scheduler. <code style="color:var(--c-kw);">await</code> suspends coroutine, loop runs next ready task. Best for high-concurrency I/O (network, DB).</div>
+    </div>
+    <div class="card" style="padding:18px;border-top:2px solid var(--c-accent);">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">ALTERNATIVE RUNTIMES</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);">PyPy (JIT, 5–10× faster loops), Cython (C transpile), Numba (LLVM JIT for arrays), GraalPy (GraalVM).</div>
+    </div>
+  </div>
+</section>
+
+<!-- S3 Core Syntax / Mechanics -->
+<section id="s3" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 03</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Core Syntax & Mechanics</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Fundamental constructs — control flow, functions, comprehensions, generators, decorators, and type annotations.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+    <div class="card" style="padding:20px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">FUNCTIONS, CLOSURES & DECORATORS</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="code-block" style="font-size:0.75rem;">
+<div><span class="kw">def</span> <span class="fn">greet</span>(name: <span class="kw">str</span>, *, loud: <span class="kw">bool</span> = <span class="num">False</span>) -> <span class="kw">str</span>:</div>
+<div>    <span class="cm"># keyword-only arg after *</span></div>
+<div>    msg = <span class="str">f"Hello, {name}"</span></div>
+<div>    <span class="kw">return</span> msg.upper() <span class="kw">if</span> loud <span class="kw">else</span> msg</div>
+<div>&nbsp;</div>
+<div><span class="kw">def</span> <span class="fn">timer</span>(func):  <span class="cm"># decorator</span></div>
+<div>    <span class="kw">import</span> time, functools</div>
+<div>    <span class="op">@</span>functools.wraps(func)</div>
+<div>    <span class="kw">def</span> <span class="fn">wrapper</span>(*args, **kwargs):</div>
+<div>        t = time.perf_counter()</div>
+<div>        result = func(*args, **kwargs)</div>
+<div>        <span class="fn">print</span>(<span class="str">f"{func.__name__}: {time.perf_counter()-t:.4f}s"</span>)</div>
+<div>        <span class="kw">return</span> result</div>
+<div>    <span class="kw">return</span> wrapper</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">COMPREHENSIONS & GENERATORS</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="code-block" style="font-size:0.75rem;">
+<div><span class="cm"># list / dict / set comprehensions</span></div>
+<div>squares = [x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> <span class="fn">range</span>(<span class="num">10</span>) <span class="kw">if</span> x % <span class="num">2</span>]</div>
+<div>inv     = {v: k <span class="kw">for</span> k, v <span class="kw">in</span> d.items()}</div>
+<div>uniq    = {x.lower() <span class="kw">for</span> x <span class="kw">in</span> words}</div>
+<div>&nbsp;</div>
+<div><span class="cm"># generator — lazy, O(1) memory</span></div>
+<div><span class="kw">def</span> <span class="fn">chunks</span>(lst, n):</div>
+<div>    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(<span class="num">0</span>, <span class="fn">len</span>(lst), n):</div>
+<div>        <span class="kw">yield</span> lst[i : i+n]</div>
+<div>&nbsp;</div>
+<div><span class="cm"># generator expression</span></div>
+<div>total = <span class="fn">sum</span>(x**<span class="num">2</span> <span class="kw">for</span> x <span class="kw">in</span> data)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">ASYNC / AWAIT (asyncio)</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="code-block" style="font-size:0.75rem;">
+<div><span class="kw">import</span> asyncio, aiohttp</div>
+<div>&nbsp;</div>
+<div><span class="kw">async def</span> <span class="fn">fetch</span>(session, url):</div>
+<div>    <span class="kw">async with</span> session.get(url) <span class="kw">as</span> r:</div>
+<div>        <span class="kw">return await</span> r.text()</div>
+<div>&nbsp;</div>
+<div><span class="kw">async def</span> <span class="fn">main</span>():</div>
+<div>    <span class="kw">async with</span> aiohttp.ClientSession() <span class="kw">as</span> s:</div>
+<div>        tasks = [<span class="fn">fetch</span>(s, u) <span class="kw">for</span> u <span class="kw">in</span> urls]</div>
+<div>        results = <span class="kw">await</span> asyncio.gather(*tasks)</div>
+<div>&nbsp;</div>
+<div>asyncio.run(<span class="fn">main</span>())  <span class="cm"># entry point</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">TYPE ANNOTATIONS (PEP 484 / 526)</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="code-block" style="font-size:0.75rem;">
+<div><span class="kw">from</span> typing <span class="kw">import</span> TypeVar, Generic</div>
+<div><span class="kw">from</span> collections.abc <span class="kw">import</span> Callable, Sequence</div>
+<div>&nbsp;</div>
+<div>T = TypeVar(<span class="str">"T"</span>)</div>
+<div>&nbsp;</div>
+<div><span class="kw">def</span> <span class="fn">first</span>(seq: Sequence[T]) -> T | <span class="kw">None</span>:</div>
+<div>    <span class="kw">return</span> seq[<span class="num">0</span>] <span class="kw">if</span> seq <span class="kw">else</span> <span class="kw">None</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># dataclass with type hints</span></div>
+<div><span class="kw">from</span> dataclasses <span class="kw">import</span> dataclass, field</div>
+<div><span class="op">@</span>dataclass</div>
+<div><span class="kw">class</span> <span class="fn">Site</span>:</div>
+<div>    name: <span class="kw">str</span></div>
+<div>    cells: <span class="kw">list</span>[<span class="kw">str</span>] = field(default_factory=<span class="kw">list</span>)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S4 Data Model / Layers -->
+<section id="s4" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 04</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Data Model & Type Hierarchy</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Python's object model — every value is an object with identity, type, and value. Dunder methods wire user classes into the language's core protocols.</p>
+
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(59,130,246,0.12);color:var(--c-primary);">Numerics</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);" data-tip="Arbitrary precision, immutable">int</span>
+      <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);" data-tip="64-bit IEEE 754 double">float</span>
+      <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);" data-tip="Real + imaginary parts">complex</span>
+      <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);" data-tip="Exact decimal arithmetic">decimal.Decimal</span>
+      <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);" data-tip="Exact rational numbers">fractions.Fraction</span>
+      <span style="color:var(--text-muted);font-size:0.75rem;">· int is unbounded · bool subclasses int (True==1)</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(16,185,129,0.12);color:var(--c-secondary);">Sequences</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);" data-tip="Mutable, O(1) append, O(n) insert">list</span>
+      <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);" data-tip="Immutable, hashable if elements are">tuple</span>
+      <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);" data-tip="Immutable Unicode, O(1) index">str</span>
+      <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);" data-tip="Mutable byte sequence">bytearray</span>
+      <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);" data-tip="Efficient fixed-type arrays">array.array</span>
+      <span style="color:var(--text-muted);font-size:0.75rem;">· list over-allocates by ~1.125× · tuple faster creation</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(139,92,246,0.12);color:var(--c-accent);">Mappings</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(139,92,246,0.1);color:var(--c-accent);" data-tip="Hash table, O(1) average lookup, insertion-ordered (3.7+)">dict</span>
+      <span class="badge" style="background:rgba(139,92,246,0.1);color:var(--c-accent);">collections.OrderedDict</span>
+      <span class="badge" style="background:rgba(139,92,246,0.1);color:var(--c-accent);" data-tip="Missing key returns default">defaultdict</span>
+      <span class="badge" style="background:rgba(139,92,246,0.1);color:var(--c-accent);" data-tip="Efficient counting">Counter</span>
+      <span style="color:var(--text-muted);font-size:0.75rem;">· dict requires hashable keys · 3.9+ merge: d1 | d2</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(250,204,21,0.12);color:var(--c-kpi);">Sets</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);" data-tip="Mutable unordered, O(1) membership">set</span>
+      <span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);" data-tip="Immutable, hashable">frozenset</span>
+      <span style="color:var(--text-muted);font-size:0.75rem;">· ops: | ∪ &amp; ∩ - \ ^ Δ · membership O(1) vs list O(n)</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(248,113,113,0.12);color:var(--c-warn);">Dunders</div>
+    <div class="layer-content">
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="Constructor — allocates object">__new__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="Initialiser">__init__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="Called when refcount hits 0">__del__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="len(obj)">__len__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="obj[key]">__getitem__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="iter(obj)">__iter__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="next(obj)">__next__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="with statement enter">__enter__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="with statement exit">__exit__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="str(obj)">__str__</span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);" data-tip="repr(obj) — unambiguous">__repr__</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(251,146,60,0.12);color:var(--c-proc);">OOP</div>
+    <div class="layer-content">
+      <span style="font-size:0.8rem;">MRO (C3 linearisation) · multiple inheritance · <code style="color:var(--c-fn);">super()</code> · <code style="color:var(--c-kw);">@classmethod</code> · <code style="color:var(--c-kw);">@staticmethod</code> · <code style="color:var(--c-kw);">@property</code> · ABC via <code style="color:var(--c-fn);">abc.abstractmethod</code> · slots (<code>__slots__</code>) reduce memory ~40%</span>
+    </div>
+  </div>
+</section>
+
+<!-- S5 Performance KPIs -->
+<section id="s5" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 05</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Performance Characteristics</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">CPython overhead, data structure complexities, and profiling targets. Know these before optimising.</p>
+
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border-subtle);">
+      <thead>
+        <tr style="background:rgba(250,204,21,0.06);border-bottom:2px solid rgba(250,204,21,0.18);">
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">OPERATION / METRIC</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">COMPLEXITY / VALUE</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">WORST CASE</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">NOTE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>list.append()</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">O(1) amortised</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">O(n) on resize</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Over-allocation factor ~1.125×</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>list.insert(0, x)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">O(n)</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">O(n)</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Use deque for O(1) front insert</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>dict / set lookup</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">O(1) average</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">O(n) hash collision</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Hash randomisation (PYTHONHASHSEED)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>str concatenation loop</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">O(n²)</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">O(n²)</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Use "".join(parts) — O(n)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>CPython function call overhead</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">~50–200 ns</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">+kwargs/defaults</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">vs C call ~1–5 ns — inline hot paths</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>List comprehension vs for loop</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">~1.5–2× faster</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">Same memory if large</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Bytecode LIST_APPEND vs STORE_FAST</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Global vs local variable</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">local ~2× faster</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">LOAD_GLOBAL slower</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Cache globals in local: x = math.sqrt</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>PyPy speedup (typical)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">4–10× CPython</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">Warm-up overhead</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Loop-heavy CPU code; not ideal for short scripts</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>GC pause (cyclic)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&lt; 1 ms typical</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">ms range large heaps</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">gc.disable() in tight loops; gc.collect() explicit</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;">
+    <div class="card" style="padding:18px;border-left:3px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">PROFILING TOOLS</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);">
+        <code style="color:var(--c-fn);">cProfile</code> — call counts + cumtime &nbsp;·&nbsp; <code style="color:var(--c-fn);">line_profiler</code> — line-level &nbsp;·&nbsp; <code style="color:var(--c-fn);">memory_profiler</code> — RAM per line &nbsp;·&nbsp; <code style="color:var(--c-fn);">timeit</code> — micro-benchmarks &nbsp;·&nbsp; <code style="color:var(--c-fn);">py-spy</code> — sampling profiler (production-safe)
+      </div>
+    </div>
+    <div class="card" style="padding:18px;border-left:3px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">OPTIMISATION CHECKLIST</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);">
+        Profile first → use built-ins (map/filter/sum) → NumPy for array maths → avoid repeated attribute lookup in loops → use <code style="color:var(--c-kw);">__slots__</code> → switch to Cython/Numba for hot loops
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S6 Procedures -->
+<section id="s6" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 06</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Development Workflows</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Package setup with modern tooling and a production error-handling / logging pattern.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">PROJECT SETUP — MODERN TOOLCHAIN</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(59,130,246,0.12);color:var(--c-primary);">1</div>
+        <div style="font-size:0.8rem;"><strong>Initialise environment</strong> — <code style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">python -m venv .venv</code> or <code style="color:var(--c-fn);">uv venv</code>. Activate: <code style="color:var(--c-str);">source .venv/bin/activate</code>. Pin deps with <code style="color:var(--c-fn);">uv pip compile</code>.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(59,130,246,0.12);color:var(--c-primary);">2</div>
+        <div style="font-size:0.8rem;"><strong>Define package metadata</strong> — <code style="color:var(--c-fn);">pyproject.toml</code> (PEP 517/518). Use <code style="color:var(--c-fn);">hatchling</code>, <code style="color:var(--c-fn);">flit</code>, or <code style="color:var(--c-fn);">setuptools</code> as build backend. Add <code style="color:var(--c-str);">[project.scripts]</code> for CLI entry points.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(59,130,246,0.12);color:var(--c-primary);">3</div>
+        <div style="font-size:0.8rem;"><strong>Lint &amp; format</strong> — <code style="color:var(--c-fn);">ruff</code> (replaces flake8+isort+pyupgrade), <code style="color:var(--c-fn);">black</code> for formatting, <code style="color:var(--c-fn);">mypy</code> or <code style="color:var(--c-fn);">pyright</code> for type checking. Pre-commit hooks enforce on commit.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(59,130,246,0.12);color:var(--c-primary);">4</div>
+        <div style="font-size:0.8rem;"><strong>Test &amp; publish</strong> — <code style="color:var(--c-fn);">pytest</code> with <code style="color:var(--c-fn);">coverage.py</code>. Target ≥ 80% coverage. Publish: <code style="color:var(--c-fn);">python -m build</code> → <code style="color:var(--c-fn);">twine upload</code> → PyPI.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">ERROR HANDLING & LOGGING PATTERN</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(16,185,129,0.12);color:var(--c-secondary);">1</div>
+        <div style="font-size:0.8rem;"><strong>Use specific exceptions</strong> — catch the narrowest exception (<code style="color:var(--c-fn);">ValueError</code>, <code style="color:var(--c-fn);">KeyError</code>). Never bare <code style="color:var(--c-kw);">except:</code>. Use <code style="color:var(--c-kw);">except Exception as e</code> + <code style="color:var(--c-fn);">raise ... from e</code> for chaining.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(16,185,129,0.12);color:var(--c-secondary);">2</div>
+        <div style="font-size:0.8rem;"><strong>Configure logging once at entry</strong> — <code style="color:var(--c-fn);">logging.basicConfig(level=INFO)</code> in <code style="color:var(--c-str);">__main__</code>. Modules use <code style="color:var(--c-fn);">logger = logging.getLogger(__name__)</code>. Never print() in library code.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(16,185,129,0.12);color:var(--c-secondary);">3</div>
+        <div style="font-size:0.8rem;"><strong>Context managers for resources</strong> — <code style="color:var(--c-kw);">with open(...)</code>, DB sessions, locks. Implement <code style="color:var(--c-fn);">__enter__</code>/<code style="color:var(--c-fn);">__exit__</code> or use <code style="color:var(--c-fn);">@contextlib.contextmanager</code>.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(16,185,129,0.12);color:var(--c-secondary);">4</div>
+        <div style="font-size:0.8rem;"><strong>Structured error responses</strong> — in APIs return typed error objects (<code style="color:var(--c-fn);">dataclass</code> / Pydantic model). Use <code style="color:var(--c-fn);">sys.exit(1)</code> on fatal CLI errors after logging the cause.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- S7 Standard Library Reference -->
+<section id="s7" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 07</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Standard Library — Key Modules</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">The "batteries included" stdlib — reach for these before installing third-party packages.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">DATA & ALGORITHMS</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="deque, Counter, defaultdict, OrderedDict, namedtuple">collections</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">High-performance container datatypes beyond list/dict</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="heappush, heappop, nlargest, nsmallest">heapq</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Min-heap priority queue — O(log n) push/pop</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="bisect_left, bisect_right, insort">bisect</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Binary search on sorted lists — O(log n)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="chain, product, combinations, groupby, islice">itertools</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Lazy iterator combinatorics — memory-efficient pipelines</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(59,130,246,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="reduce, partial, lru_cache, cache">functools</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Higher-order functions, memoisation, partial application</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">I/O, FILES & CONCURRENCY</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="Path, glob, mkdir, stat, read_text">pathlib</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">OO filesystem paths — prefer over os.path in 3.4+</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="ThreadPoolExecutor, ProcessPoolExecutor">concurrent.futures</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">High-level thread/process pool with Future objects</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="Event loop, tasks, queues, streams">asyncio</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Async I/O event loop — coroutines, tasks, streams</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="json.dumps / loads with indent, sort_keys">json</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Built-in JSON encode/decode — use ujson/orjson for perf</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(16,185,129,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="csv.DictReader, DictWriter">csv</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">RFC 4180 CSV read/write — quoting, dialects, delimiters</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">SYSTEM, PROCESS & INTROSPECTION</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(139,92,246,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="argv, path, modules, exit, stdin/stdout">sys</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Runtime environment: argv, path, exc_info, platform</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(139,92,246,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="run, Popen, PIPE, check_output">subprocess</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Spawn, manage, communicate with child processes</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(139,92,246,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="getmembers, signature, isclass, isfunction">inspect</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Introspect live objects — useful in frameworks &amp; decorators</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(139,92,246,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="timeit, perf_counter, perf_counter_ns">time / timeit</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">High-res timing — perf_counter for wall-clock benchmarks</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">POPULAR THIRD-PARTY ECOSYSTEM</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">NumPy</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">N-dimensional arrays, vectorised ops, C-speed loops</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">pandas</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">DataFrame/Series — tabular data, groupby, merge, resample</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">FastAPI</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Async web framework — auto OpenAPI, Pydantic validation</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">SQLAlchemy</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">ORM + Core — multiple DB backends, async support (2.0)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">Pydantic</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Data validation via type annotations — powers FastAPI models</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- S8 Cheatsheet -->
+<section id="s8" class="reveal" style="padding:48px 0 48px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 08</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Values Cheatsheet</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Quick-reference cards — data type sizes, built-in functions, operator precedence, f-string formats, pytest patterns, and packaging commands.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">BUILT-IN FUNCTIONS (MUST-KNOW)</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">len / range / enumerate</span><span style="color:var(--text-muted);">iteration</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">map / filter / zip</span><span style="color:var(--text-muted);">lazy transforms</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">sorted / min / max / sum</span><span style="color:var(--text-muted);">aggregation</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">any / all / isinstance</span><span style="color:var(--text-muted);">predicates</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">getattr / setattr / hasattr</span><span style="color:var(--text-muted);">reflection</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">vars / dir / id / type</span><span style="color:var(--text-muted);">introspection</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">F-STRING FORMAT SPECIFIERS</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="code-block" style="font-size:0.74rem;">
+<div><span class="str">f"{3.14159:.2f}"</span>      <span class="cm"># "3.14"</span></div>
+<div><span class="str">f"{1000000:,}"</span>        <span class="cm"># "1,000,000"</span></div>
+<div><span class="str">f"{0.856:.1%}"</span>        <span class="cm"># "85.6%"</span></div>
+<div><span class="str">f"{255:#010x}"</span>        <span class="cm"># "0x000000ff"</span></div>
+<div><span class="str">f"{'hi':^20}"</span>         <span class="cm"># "        hi        "</span></div>
+<div><span class="str">f"{val!r}"</span>            <span class="cm"># repr(val)</span></div>
+<div><span class="str">f"{val=}"</span>             <span class="cm"># "val=42"  (debug)</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-accent);">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">DATA TYPE MEMORY SIZES (CPython 3.12)</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kw);">int (small)</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);">28 bytes</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kw);">float</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);">24 bytes</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kw);">str (empty)</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);">49 bytes + 1–4/char</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kw);">list (empty)</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);">56 bytes + 8/item</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kw);">dict (empty)</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);">184 bytes</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-kw);">set (empty)</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-accent);">216 bytes</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-kpi);">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">OPERATOR PRECEDENCE (HIGH→LOW)</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">() [] {}</span><span style="color:var(--text-muted);">grouping / subscript</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">**</span><span style="color:var(--text-muted);">exponentiation (right-assoc)</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">* / // % @</span><span style="color:var(--text-muted);">multiplicative</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">+ -</span><span style="color:var(--text-muted);">additive</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border-subtle);">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">&lt;&lt; &gt;&gt; &amp; ^ |</span><span style="color:var(--text-muted);">bitwise</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:3px 0;">
+          <span style="font-family:'JetBrains Mono',monospace;color:var(--c-fn);">not and or</span><span style="color:var(--text-muted);">boolean</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-proc);">
+      <div style="font-size:0.68rem;color:var(--c-proc);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">PYTEST PATTERNS</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="code-block" style="font-size:0.74rem;">
+<div><span class="kw">import</span> pytest</div>
+<div>&nbsp;</div>
+<div><span class="kw">def</span> <span class="fn">test_basic</span>():</div>
+<div>    <span class="kw">assert</span> <span class="fn">add</span>(<span class="num">1</span>, <span class="num">2</span>) == <span class="num">3</span></div>
+<div>&nbsp;</div>
+<div><span class="op">@</span>pytest.mark.parametrize(<span class="str">"a,b,expected"</span>, [</div>
+<div>    (<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>), (<span class="num">0</span>, <span class="num">0</span>, <span class="num">0</span>), (<span class="num">-1</span>, <span class="num">1</span>, <span class="num">0</span>),</div>
+<div>])</div>
+<div><span class="kw">def</span> <span class="fn">test_add</span>(a, b, expected):</div>
+<div>    <span class="kw">assert</span> <span class="fn">add</span>(a, b) == expected</div>
+<div>&nbsp;</div>
+<div><span class="kw">def</span> <span class="fn">test_raises</span>():</div>
+<div>    <span class="kw">with</span> pytest.raises(ValueError, match=<span class="str">"negative"</span>):</div>
+<div>        <span class="fn">sqrt</span>(-<span class="num">1</span>)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-warn);">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">PACKAGING & ENV COMMANDS</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div class="code-block" style="font-size:0.74rem;">
+<div><span class="cm"># virtualenv</span></div>
+<div><span class="fn">python</span> -m venv .venv &amp;&amp; source .venv/bin/activate</div>
+<div>&nbsp;</div>
+<div><span class="cm"># uv (fast Rust-based tool)</span></div>
+<div><span class="fn">uv</span> venv &amp;&amp; uv pip install -r requirements.txt</div>
+<div><span class="fn">uv</span> pip compile requirements.in -o requirements.txt</div>
+<div>&nbsp;</div>
+<div><span class="cm"># build &amp; publish</span></div>
+<div><span class="fn">python</span> -m build            <span class="cm"># creates dist/</span></div>
+<div><span class="fn">twine</span> upload dist/*        <span class="cm"># push to PyPI</span></div>
+<div>&nbsp;</div>
+<div><span class="cm"># freeze installed</span></div>
+<div><span class="fn">pip</span> freeze > requirements.txt</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</div><!-- end container -->
+
+<!-- Footer -->
+<footer style="background:rgba(0,0,0,0.4);border-top:1px solid var(--border-subtle);padding:36px 20px;text-align:center;margin-top:32px;">
+  <div style="max-width:700px;margin:0 auto;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.1em;margin-bottom:14px;">FURTHER READING</div>
+    <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+      <a href="https://docs.python.org/3/" target="_blank" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">Python Docs 3.x</a>
+      <a href="https://peps.python.org/pep-0008/" target="_blank" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">PEP 8 Style Guide</a>
+      <a href="https://realpython.com/" target="_blank" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">Real Python</a>
+      <a href="https://wiki.python.org/moin/TimeComplexity" target="_blank" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">Time Complexity</a>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-muted);">🐍 Python Programming in a Nutshell · Engineer Reference · CPython 3.12 · PEP 484 / 517 / 703</div>
+  </div>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
+    html.classList.toggle('dark', !isDark);
+    html.classList.toggle('light', isDark);
+    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+  }
+
+  function scrollToSec(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.07 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  const sections = ['hero','s1','s2','s3','s4','s5','s6','s7','s8'];
+  const dots = document.querySelectorAll('.toc-dot');
+  const tocObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = sections.indexOf(e.target.id);
+        if (idx >= 0) dots.forEach((d,i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(id => { const el = document.getElementById(id); if (el) tocObs.observe(el); });
+
+  function copyBlock(btn) {
+    const block = btn.nextElementSibling;
+    navigator.clipboard.writeText(block.innerText.trim()).then(() => {
+      btn.textContent = 'copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+</script>
+</body>
+</html>

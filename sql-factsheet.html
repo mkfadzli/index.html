@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SQL in a Nutshell – Beginner Edition</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          night: { 950: '#060910', 900: '#0b1120', 800: '#111827', 700: '#1a2540' },
+          select: { DEFAULT: '#3b82f6', dark: '#1d4ed8', glow: '#60a5fa' },
+          insert: { DEFAULT: '#10b981', dark: '#047857', glow: '#34d399' },
+          update: { DEFAULT: '#f59e0b', dark: '#b45309', glow: '#fcd34d' },
+          delet:  { DEFAULT: '#ef4444', dark: '#b91c1c', glow: '#f87171' },
+          join:   { DEFAULT: '#8b5cf6', dark: '#6d28d9', glow: '#a78bfa' },
+          type:   { DEFAULT: '#06b6d4', dark: '#0e7490', glow: '#67e8f9' },
+        },
+        fontFamily: {
+          mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+        },
+        boxShadow: {
+          'select': '0 0 20px rgba(59,130,246,0.25)',
+          'insert': '0 0 20px rgba(16,185,129,0.25)',
+          'update': '0 0 20px rgba(245,158,11,0.25)',
+          'delet':  '0 0 20px rgba(239,68,68,0.25)',
+          'join':   '0 0 20px rgba(139,92,246,0.25)',
+          'type':   '0 0 20px rgba(6,182,212,0.25)',
+          'neon':   '0 0 30px rgba(96,165,250,0.4)',
+        },
+      }
+    }
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg-primary: #060910;
+    --bg-card: #0f1923;
+    --bg-card-hover: #141f2e;
+    --border-subtle: rgba(255,255,255,0.07);
+    --text-primary: #e8edf5;
+    --text-secondary: #8899b0;
+    --text-muted: #556070;
+  }
+  .light {
+    --bg-primary: #f0f4fa;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f8faff;
+    --border-subtle: rgba(0,0,0,0.08);
+    --text-primary: #111827;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+  }
+
+  * { box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: #2a3a52; border-radius: 10px; }
+
+  /* Card base */
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    transition: all 0.25s ease;
+  }
+  .card:hover { background: var(--bg-card-hover); transform: translateY(-2px); }
+
+  /* Code blocks */
+  .code-block {
+    font-family: 'JetBrains Mono', monospace;
+    background: #010508;
+    border: 1px solid rgba(59,130,246,0.15);
+    border-radius: 8px;
+    font-size: 0.82rem;
+    line-height: 1.7;
+    position: relative;
+    overflow: hidden;
+  }
+  .light .code-block {
+    background: #1e293b;
+    color: #e2e8f0;
+  }
+  .code-block::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), transparent);
+  }
+
+  /* Keyword colors */
+  .kw-blue  { color: #60a5fa; }
+  .kw-green { color: #34d399; }
+  .kw-amber { color: #fcd34d; }
+  .kw-red   { color: #f87171; }
+  .kw-purple{ color: #a78bfa; }
+  .kw-cyan  { color: #67e8f9; }
+  .kw-str   { color: #86efac; }
+  .kw-num   { color: #fb923c; }
+  .kw-cmt   { color: #475569; font-style: italic; }
+
+  /* Section fade-in */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* Command badge */
+  .cmd-badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  /* Floating TOC */
+  #toc-panel {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .toc-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .toc-dot:hover, .toc-dot.active {
+    background: #60a5fa;
+    transform: scale(1.5);
+    box-shadow: 0 0 8px rgba(96,165,250,0.6);
+  }
+  .toc-dot::after {
+    content: attr(data-label);
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    white-space: nowrap;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    background: var(--bg-card);
+    padding: 2px 8px;
+    border-radius: 4px;
+    border: 1px solid var(--border-subtle);
+  }
+  .toc-dot:hover::after { opacity: 1; }
+
+  /* Copy btn */
+  .copy-btn {
+    position: absolute;
+    top: 10px; right: 10px;
+    background: rgba(59,130,246,0.15);
+    border: 1px solid rgba(59,130,246,0.3);
+    color: #60a5fa;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    z-index: 5;
+  }
+  .copy-btn:hover { background: rgba(59,130,246,0.3); }
+  .copy-btn.copied { color: #34d399; border-color: #34d399; background: rgba(52,211,153,0.15); }
+
+  /* Join diagram */
+  .join-circle {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    opacity: 0.6;
+    position: absolute;
+  }
+
+  /* Hero grid bg */
+  .hero-grid {
+    background-image:
+      linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Progress bar for difficulty */
+  .diff-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+  }
+  .diff-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 1s ease;
+  }
+
+  /* Tooltip */
+  [data-tip] { position: relative; cursor: help; }
+  [data-tip]::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a2540;
+    color: #e8edf5;
+    border: 1px solid rgba(96,165,250,0.3);
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 100;
+    font-family: 'Inter', sans-serif;
+    font-style: normal;
+  }
+  [data-tip]:hover::after { opacity: 1; }
+
+  /* Section number */
+  .sec-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  /* Anatomy tokens */
+  .token {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .token-word {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 8px;
+    letter-spacing: 0.05em;
+  }
+  .token-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* Dark mode toggle */
+  #theme-btn {
+    position: fixed;
+    top: 20px; right: 20px;
+    z-index: 100;
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+  #theme-btn:hover { border-color: #60a5fa; color: #60a5fa; }
+
+  /* Responsive TOC hide on small */
+  @media (max-width: 768px) {
+    #toc-panel { display: none; }
+    #theme-btn { top: 12px; right: 12px; padding: 6px 10px; font-size: 0.7rem; }
+  }
+
+  /* SQL demo area */
+  #sql-demo {
+    background: #010508;
+    border: 1px solid rgba(59,130,246,0.2);
+    border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: #e2e8f0;
+    padding: 16px;
+    min-height: 100px;
+    outline: none;
+    resize: vertical;
+    caret-color: #60a5fa;
+  }
+  #sql-output {
+    background: #01080f;
+    border: 1px solid rgba(52,211,153,0.2);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: #34d399;
+    padding: 14px;
+    min-height: 60px;
+    white-space: pre-wrap;
+  }
+  .run-btn {
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.04em;
+  }
+  .run-btn:hover { background: linear-gradient(135deg, #2563eb, #3b82f6); box-shadow: 0 0 20px rgba(59,130,246,0.4); }
+</style>
+</head>
+<body>
+
+<!-- Theme toggle -->
+<button id="theme-btn" onclick="toggleTheme()">
+  <span id="theme-icon">☀️</span>
+  <span id="theme-label">Light</span>
+</button>
+
+<!-- Floating TOC -->
+<nav id="toc-panel" aria-label="Sections">
+  <div class="toc-dot active" data-label="Home" onclick="scrollTo('hero')"></div>
+  <div class="toc-dot" data-label="What is SQL?" onclick="scrollTo('s1')"></div>
+  <div class="toc-dot" data-label="Query Anatomy" onclick="scrollTo('s2')"></div>
+  <div class="toc-dot" data-label="Commands" onclick="scrollTo('s3')"></div>
+  <div class="toc-dot" data-label="Clauses" onclick="scrollTo('s4')"></div>
+  <div class="toc-dot" data-label="Joins" onclick="scrollTo('s5')"></div>
+  <div class="toc-dot" data-label="Data Types" onclick="scrollTo('s6')"></div>
+  <div class="toc-dot" data-label="Best Practices" onclick="scrollTo('s7')"></div>
+  <div class="toc-dot" data-label="Try It" onclick="scrollTo('s8')"></div>
+</nav>
+
+<!-- ═══════════════════════════════════════════════════ HERO -->
+<section id="hero" class="hero-grid min-h-screen flex flex-col items-center justify-center px-6 py-24 relative overflow-hidden">
+  <!-- Background glow orbs -->
+  <div style="position:absolute;top:10%;left:15%;width:400px;height:400px;background:radial-gradient(circle,rgba(59,130,246,0.08),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:15%;right:10%;width:300px;height:300px;background:radial-gradient(circle,rgba(139,92,246,0.08),transparent 70%);pointer-events:none;"></div>
+
+  <div class="text-center max-w-3xl relative z-10 reveal">
+    <!-- Badge -->
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);border-radius:20px;padding:4px 16px;margin-bottom:24px;">
+      <span style="width:6px;height:6px;background:#60a5fa;border-radius:50%;animation:pulse 2s infinite;"></span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:#60a5fa;letter-spacing:0.1em;">BY FADZLI ABDULLAH WITH ❤️ FOR ABSOLUTE BEGINNERS</span>
+    </div>
+
+    <h1 style="font-size:clamp(2.2rem,6vw,4rem);font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:16px;">
+      <span style="color:var(--text-primary);">SQL</span>
+      <span style="background:linear-gradient(135deg,#3b82f6,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">in a Nutshell</span>
+      <br>
+      <span style="color:var(--text-primary);">Beginner Edition</span>
+    </h1>
+
+    <p style="font-size:1.1rem;color:var(--text-secondary);max-width:520px;margin:0 auto 32px;line-height:1.7;">
+      Everything you need to start querying databases — from zero to your first
+      <span style="font-family:'JetBrains Mono',monospace;color:#60a5fa;">SELECT</span> in minutes.
+    </p>
+
+    <!-- Stats row -->
+    <div style="display:flex;justify-content:center;gap:32px;flex-wrap:wrap;margin-bottom:40px;">
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.8rem;font-weight:700;color:#60a5fa;">9</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Sections</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.8rem;font-weight:700;color:#34d399;">30+</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Commands</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.8rem;font-weight:700;color:#a78bfa;">4</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Join Types</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.8rem;font-weight:700;color:#fcd34d;">∞</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Queries await</div>
+      </div>
+    </div>
+
+    <button onclick="scrollTo('s1')" style="background:linear-gradient(135deg,#1d4ed8,#4f46e5);color:#fff;border:none;padding:14px 36px;border-radius:10px;font-size:0.95rem;font-weight:600;cursor:pointer;letter-spacing:0.02em;box-shadow:0 0 30px rgba(59,130,246,0.35);transition:all 0.2s;" onmouseover="this.style.boxShadow='0 0 40px rgba(59,130,246,0.6)'" onmouseout="this.style.boxShadow='0 0 30px rgba(59,130,246,0.35)'">
+      Start Learning ↓
+    </button>
+  </div>
+</section>
+
+<div style="max-width:960px;margin:0 auto;padding:0 20px;">
+
+<!-- ═══════════════════════════════════════════════════ S1: WHAT IS SQL -->
+<section id="s1" class="reveal" style="padding:80px 0 40px;">
+  <div class="sec-num">01 — FOUNDATIONS</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 32px;color:var(--text-primary);">What is SQL?</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;" class="md:grid-cols-2">
+    <div class="card" style="padding:28px;border-left:3px solid #3b82f6;">
+      <div style="font-size:0.7rem;color:#60a5fa;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:12px;">DEFINITION</div>
+      <p style="font-size:0.95rem;color:var(--text-primary);line-height:1.7;">
+        <strong>SQL</strong> (Structured Query Language) is the standard language for communicating with relational databases. It lets you <strong>store, retrieve, update, and delete</strong> data.
+      </p>
+    </div>
+    <div class="card" style="padding:28px;border-left:3px solid #8b5cf6;">
+      <div style="font-size:0.7rem;color:#a78bfa;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:12px;">PRONUNCIATION</div>
+      <p style="font-size:0.95rem;color:var(--text-primary);line-height:1.7;">
+        Say <strong>"S-Q-L"</strong> or <strong>"sequel"</strong> — both are accepted. Invented at IBM in the 1970s, it became the universal data query standard.
+      </p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:20px;">
+    <div class="card" style="padding:20px;text-align:center;">
+      <div style="font-size:1.6rem;margin-bottom:8px;">🗄️</div>
+      <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">Relational</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">Data in tables with rows & columns</div>
+    </div>
+    <div class="card" style="padding:20px;text-align:center;">
+      <div style="font-size:1.6rem;margin-bottom:8px;">🔍</div>
+      <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">Declarative</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">Say <em>what</em> you want, not how</div>
+    </div>
+    <div class="card" style="padding:20px;text-align:center;">
+      <div style="font-size:1.6rem;margin-bottom:8px;">⚡</div>
+      <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">Universal</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">MySQL, PostgreSQL, SQLite, MSSQL</div>
+    </div>
+    <div class="card" style="padding:20px;text-align:center;">
+      <div style="font-size:1.6rem;margin-bottom:8px;">📊</div>
+      <div style="font-weight:600;font-size:0.85rem;color:var(--text-primary);">CRUD</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">Create, Read, Update, Delete</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ S2: QUERY ANATOMY -->
+<section id="s2" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">02 — STRUCTURE</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 32px;color:var(--text-primary);">Anatomy of a Query</h2>
+
+  <!-- Token breakdown -->
+  <div class="card" style="padding:36px;margin-bottom:28px;overflow:hidden;position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#3b82f6,#8b5cf6,#10b981);"></div>
+    <div style="font-size:0.7rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:20px;">A COMPLETE SQL STATEMENT</div>
+
+    <div style="display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;justify-content:center;margin-bottom:28px;">
+      <div class="token">
+        <div class="token-word" style="background:rgba(59,130,246,0.15);color:#60a5fa;" data-tip="Specifies which columns to retrieve">SELECT</div>
+        <div class="token-label">Keyword</div>
+      </div>
+      <div style="display:flex;align-items:center;padding-top:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">→</div>
+      <div class="token">
+        <div class="token-word" style="background:rgba(252,211,77,0.12);color:#fcd34d;" data-tip="Column names (or * for all)">name, age</div>
+        <div class="token-label">Columns</div>
+      </div>
+      <div style="display:flex;align-items:center;padding-top:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">→</div>
+      <div class="token">
+        <div class="token-word" style="background:rgba(16,185,129,0.12);color:#34d399;" data-tip="Specifies the source table">FROM</div>
+        <div class="token-label">Keyword</div>
+      </div>
+      <div style="display:flex;align-items:center;padding-top:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">→</div>
+      <div class="token">
+        <div class="token-word" style="background:rgba(252,211,77,0.12);color:#fcd34d;" data-tip="The table name you're querying">users</div>
+        <div class="token-label">Table</div>
+      </div>
+      <div style="display:flex;align-items:center;padding-top:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">→</div>
+      <div class="token">
+        <div class="token-word" style="background:rgba(139,92,246,0.12);color:#a78bfa;" data-tip="Filters rows based on a condition">WHERE</div>
+        <div class="token-label">Filter</div>
+      </div>
+      <div style="display:flex;align-items:center;padding-top:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">→</div>
+      <div class="token">
+        <div class="token-word" style="background:rgba(239,68,68,0.1);color:#f87171;" data-tip="The condition to filter by">age > 18</div>
+        <div class="token-label">Condition</div>
+      </div>
+      <div style="display:flex;align-items:center;padding-top:10px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">→</div>
+      <div class="token">
+        <div class="token-word" style="background:rgba(6,182,212,0.12);color:#67e8f9;" data-tip="Always end SQL statements with a semicolon">;</div>
+        <div class="token-label">Terminator</div>
+      </div>
+    </div>
+
+    <div class="code-block" style="padding:20px;position:relative;">
+      <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      <div><span class="kw-blue">SELECT</span> <span class="kw-amber">name</span>, <span class="kw-amber">age</span></div>
+      <div><span class="kw-green">FROM</span>   <span class="kw-str">users</span></div>
+      <div><span class="kw-purple">WHERE</span>  <span class="kw-amber">age</span> &gt; <span class="kw-num">18</span></div>
+      <div><span class="kw-blue">ORDER BY</span> <span class="kw-amber">name</span> <span class="kw-cyan">ASC</span></div>
+      <div><span class="kw-red">LIMIT</span>  <span class="kw-num">10</span>;</div>
+    </div>
+  </div>
+
+  <!-- Clause order -->
+  <div class="card" style="padding:24px;">
+    <div style="font-size:0.7rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:14px;">CLAUSE EXECUTION ORDER</div>
+    <div style="display:flex;gap:0;flex-wrap:wrap;">
+      <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#60a5fa;display:flex;align-items:center;gap:8px;border-right:none;border-radius:6px 0 0 6px;">
+        <span style="opacity:0.5;font-size:0.65rem;">①</span> FROM
+      </div>
+      <div style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#a78bfa;display:flex;align-items:center;gap:8px;border-right:none;border-left:none;">
+        <span style="opacity:0.5;font-size:0.65rem;">②</span> WHERE
+      </div>
+      <div style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#34d399;display:flex;align-items:center;gap:8px;border-right:none;border-left:none;">
+        <span style="opacity:0.5;font-size:0.65rem;">③</span> GROUP BY
+      </div>
+      <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.2);padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#fcd34d;display:flex;align-items:center;gap:8px;border-right:none;border-left:none;">
+        <span style="opacity:0.5;font-size:0.65rem;">④</span> HAVING
+      </div>
+      <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#60a5fa;display:flex;align-items:center;gap:8px;border-right:none;border-left:none;">
+        <span style="opacity:0.5;font-size:0.65rem;">⑤</span> SELECT
+      </div>
+      <div style="background:rgba(6,182,212,0.1);border:1px solid rgba(6,182,212,0.2);padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#67e8f9;display:flex;align-items:center;gap:8px;border-right:none;border-left:none;">
+        <span style="opacity:0.5;font-size:0.65rem;">⑥</span> ORDER BY
+      </div>
+      <div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);padding:8px 16px;font-family:'JetBrains Mono',monospace;font-size:0.78rem;color:#f87171;display:flex;align-items:center;gap:8px;border-radius:0 6px 6px 0;border-left:none;">
+        <span style="opacity:0.5;font-size:0.65rem;">⑦</span> LIMIT
+      </div>
+    </div>
+    <div style="font-size:0.72rem;color:var(--text-muted);margin-top:10px;">💡 Even though you write SELECT first, the database executes FROM first.</div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ S3: COMMANDS -->
+<section id="s3" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">03 — COMMANDS</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 8px;color:var(--text-primary);">Most Important Commands</h2>
+  <p style="color:var(--text-secondary);margin-bottom:28px;font-size:0.9rem;">The building blocks of every SQL operation.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px;">
+
+    <!-- SELECT -->
+    <div class="card" style="padding:24px;border-left:3px solid #3b82f6;box-shadow:0 0 20px rgba(59,130,246,0.1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="cmd-badge" style="background:rgba(59,130,246,0.15);color:#60a5fa;">SELECT</span>
+        <div style="width:60px;"><div class="diff-bar"><div class="diff-fill" style="width:25%;background:#3b82f6;"></div></div></div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Retrieve data from one or more columns.</p>
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-blue">SELECT</span> <span class="kw-amber">name</span>, <span class="kw-amber">email</span> <span class="kw-green">FROM</span> <span class="kw-str">users</span>;</div>
+        <div><span class="kw-blue">SELECT</span> * <span class="kw-green">FROM</span> <span class="kw-str">products</span>; <span class="kw-cmt">-- all cols</span></div>
+      </div>
+    </div>
+
+    <!-- FROM -->
+    <div class="card" style="padding:24px;border-left:3px solid #10b981;box-shadow:0 0 20px rgba(16,185,129,0.1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="cmd-badge" style="background:rgba(16,185,129,0.15);color:#34d399;">FROM</span>
+        <div style="width:60px;"><div class="diff-bar"><div class="diff-fill" style="width:20%;background:#10b981;"></div></div></div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Specifies the source table(s) for the query.</p>
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-blue">SELECT</span> * <span class="kw-green">FROM</span> <span class="kw-str">orders</span>;</div>
+        <div><span class="kw-blue">SELECT</span> * <span class="kw-green">FROM</span> <span class="kw-str">customers</span> <span class="kw-cyan">c</span>;</div>
+      </div>
+    </div>
+
+    <!-- WHERE -->
+    <div class="card" style="padding:24px;border-left:3px solid #8b5cf6;box-shadow:0 0 20px rgba(139,92,246,0.1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="cmd-badge" style="background:rgba(139,92,246,0.15);color:#a78bfa;">WHERE</span>
+        <div style="width:60px;"><div class="diff-bar"><div class="diff-fill" style="width:35%;background:#8b5cf6;"></div></div></div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Filter rows matching a condition.</p>
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-blue">SELECT</span> * <span class="kw-green">FROM</span> <span class="kw-str">users</span></div>
+        <div><span class="kw-purple">WHERE</span> <span class="kw-amber">age</span> &gt; <span class="kw-num">25</span> <span class="kw-blue">AND</span> <span class="kw-amber">active</span> = <span class="kw-num">1</span>;</div>
+      </div>
+    </div>
+
+    <!-- ORDER BY -->
+    <div class="card" style="padding:24px;border-left:3px solid #06b6d4;box-shadow:0 0 20px rgba(6,182,212,0.1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="cmd-badge" style="background:rgba(6,182,212,0.15);color:#67e8f9;">ORDER BY</span>
+        <div style="width:60px;"><div class="diff-bar"><div class="diff-fill" style="width:30%;background:#06b6d4;"></div></div></div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Sort results ascending or descending.</p>
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-blue">SELECT</span> * <span class="kw-green">FROM</span> <span class="kw-str">products</span></div>
+        <div><span class="kw-cyan">ORDER BY</span> <span class="kw-amber">price</span> <span class="kw-blue">DESC</span>;</div>
+      </div>
+    </div>
+
+    <!-- LIMIT -->
+    <div class="card" style="padding:24px;border-left:3px solid #ef4444;box-shadow:0 0 20px rgba(239,68,68,0.08);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="cmd-badge" style="background:rgba(239,68,68,0.15);color:#f87171;">LIMIT</span>
+        <div style="width:60px;"><div class="diff-bar"><div class="diff-fill" style="width:20%;background:#ef4444;"></div></div></div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Cap the number of returned rows.</p>
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-blue">SELECT</span> * <span class="kw-green">FROM</span> <span class="kw-str">logs</span></div>
+        <div><span class="kw-red">LIMIT</span> <span class="kw-num">100</span>; <span class="kw-cmt">-- first 100 rows</span></div>
+      </div>
+    </div>
+
+    <!-- INSERT -->
+    <div class="card" style="padding:24px;border-left:3px solid #10b981;box-shadow:0 0 20px rgba(16,185,129,0.15);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="cmd-badge" style="background:rgba(16,185,129,0.15);color:#34d399;">INSERT</span>
+        <div style="width:60px;"><div class="diff-bar"><div class="diff-fill" style="width:45%;background:#10b981;"></div></div></div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Add new rows into a table.</p>
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-green">INSERT INTO</span> <span class="kw-str">users</span> (<span class="kw-amber">name</span>, <span class="kw-amber">age</span>)</div>
+        <div><span class="kw-blue">VALUES</span> (<span class="kw-str">'Alice'</span>, <span class="kw-num">30</span>);</div>
+      </div>
+    </div>
+
+    <!-- UPDATE -->
+    <div class="card" style="padding:24px;border-left:3px solid #f59e0b;box-shadow:0 0 20px rgba(245,158,11,0.1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="cmd-badge" style="background:rgba(245,158,11,0.15);color:#fcd34d;">UPDATE</span>
+        <div style="width:60px;"><div class="diff-bar"><div class="diff-fill" style="width:55%;background:#f59e0b;"></div></div></div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Modify existing row values.</p>
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-amber">UPDATE</span> <span class="kw-str">users</span> <span class="kw-blue">SET</span> <span class="kw-amber">age</span> = <span class="kw-num">31</span></div>
+        <div><span class="kw-purple">WHERE</span> <span class="kw-amber">name</span> = <span class="kw-str">'Alice'</span>;</div>
+      </div>
+    </div>
+
+    <!-- DELETE -->
+    <div class="card" style="padding:24px;border-left:3px solid #ef4444;box-shadow:0 0 20px rgba(239,68,68,0.12);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="cmd-badge" style="background:rgba(239,68,68,0.2);color:#f87171;">DELETE</span>
+        <div style="width:60px;"><div class="diff-bar"><div class="diff-fill" style="width:50%;background:#ef4444;"></div></div></div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Remove rows from a table. ⚠️ Always use WHERE!</p>
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-red">DELETE FROM</span> <span class="kw-str">users</span></div>
+        <div><span class="kw-purple">WHERE</span> <span class="kw-amber">id</span> = <span class="kw-num">42</span>;</div>
+      </div>
+    </div>
+
+    <!-- CREATE TABLE -->
+    <div class="card" style="padding:24px;border-left:3px solid #06b6d4;box-shadow:0 0 20px rgba(6,182,212,0.1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <span class="cmd-badge" style="background:rgba(6,182,212,0.15);color:#67e8f9;">CREATE TABLE</span>
+        <div style="width:60px;"><div class="diff-bar"><div class="diff-fill" style="width:60%;background:#06b6d4;"></div></div></div>
+      </div>
+      <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Define a new table schema.</p>
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-cyan">CREATE TABLE</span> <span class="kw-str">employees</span> (</div>
+        <div>  <span class="kw-amber">id</span>   <span class="kw-blue">INT</span> <span class="kw-purple">PRIMARY KEY</span>,</div>
+        <div>  <span class="kw-amber">name</span> <span class="kw-blue">VARCHAR</span>(<span class="kw-num">100</span>)</div>
+        <div>);</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ S4: CLAUSES -->
+<section id="s4" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">04 — CLAUSES & KEYWORDS</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;color:var(--text-primary);">Essential Clauses</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- Filtering -->
+    <div class="card" style="padding:28px;">
+      <div style="color:#a78bfa;font-size:0.7rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:16px;">FILTERING</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+
+        <div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
+            <span class="cmd-badge" style="background:rgba(139,92,246,0.15);color:#a78bfa;" data-tip="Basic filter">WHERE</span>
+            <span class="cmd-badge" style="background:rgba(96,165,250,0.1);color:#60a5fa;" data-tip="Both conditions must be true">AND</span>
+            <span class="cmd-badge" style="background:rgba(96,165,250,0.1);color:#60a5fa;" data-tip="Either condition must be true">OR</span>
+          </div>
+          <div class="code-block" style="padding:10px;position:relative;">
+            <button class="copy-btn" onclick="copyCode(this)">copy</button>
+            <div><span class="kw-purple">WHERE</span> <span class="kw-amber">city</span> = <span class="kw-str">'KL'</span> <span class="kw-blue">AND</span> <span class="kw-amber">age</span> &gt; <span class="kw-num">18</span></div>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;gap:8px;margin-bottom:8px;">
+            <span class="cmd-badge" style="background:rgba(167,139,250,0.12);color:#a78bfa;" data-tip="Match any in a list">IN</span>
+            <span class="cmd-badge" style="background:rgba(167,139,250,0.12);color:#a78bfa;" data-tip="Pattern matching with wildcards">LIKE</span>
+            <span class="cmd-badge" style="background:rgba(167,139,250,0.12);color:#a78bfa;" data-tip="Inclusive range filter">BETWEEN</span>
+          </div>
+          <div class="code-block" style="padding:10px;position:relative;">
+            <button class="copy-btn" onclick="copyCode(this)">copy</button>
+            <div><span class="kw-purple">WHERE</span> <span class="kw-amber">country</span> <span class="kw-blue">IN</span> (<span class="kw-str">'MY'</span>, <span class="kw-str">'SG'</span>)</div>
+            <div><span class="kw-purple">WHERE</span> <span class="kw-amber">name</span> <span class="kw-blue">LIKE</span> <span class="kw-str">'A%'</span> <span class="kw-cmt">-- starts with A</span></div>
+            <div><span class="kw-purple">WHERE</span> <span class="kw-amber">age</span> <span class="kw-blue">BETWEEN</span> <span class="kw-num">20</span> <span class="kw-blue">AND</span> <span class="kw-num">40</span></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Aggregations -->
+    <div class="card" style="padding:28px;">
+      <div style="color:#34d399;font-size:0.7rem;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:16px;">AGGREGATIONS</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:6px;padding:10px;text-align:center;" data-tip="Count non-null values">
+          <div style="font-family:'JetBrains Mono',monospace;color:#34d399;font-weight:700;">COUNT()</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">How many rows</div>
+        </div>
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:6px;padding:10px;text-align:center;" data-tip="Sum all values in a column">
+          <div style="font-family:'JetBrains Mono',monospace;color:#34d399;font-weight:700;">SUM()</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Total value</div>
+        </div>
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:6px;padding:10px;text-align:center;" data-tip="Calculate the arithmetic mean">
+          <div style="font-family:'JetBrains Mono',monospace;color:#34d399;font-weight:700;">AVG()</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Average</div>
+        </div>
+        <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);border-radius:6px;padding:10px;text-align:center;" data-tip="Smallest / largest value">
+          <div style="font-family:'JetBrains Mono',monospace;color:#34d399;font-weight:700;">MIN / MAX</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">Range extremes</div>
+        </div>
+      </div>
+
+      <div class="code-block" style="padding:12px;position:relative;">
+        <button class="copy-btn" onclick="copyCode(this)">copy</button>
+        <div><span class="kw-blue">SELECT</span> <span class="kw-amber">dept</span>, <span class="kw-green">COUNT</span>(*) <span class="kw-blue">AS</span> <span class="kw-str">total</span>,</div>
+        <div>       <span class="kw-green">AVG</span>(<span class="kw-amber">salary</span>) <span class="kw-blue">AS</span> <span class="kw-str">avg_pay</span></div>
+        <div><span class="kw-green">FROM</span>   <span class="kw-str">employees</span></div>
+        <div><span class="kw-cyan">GROUP BY</span> <span class="kw-amber">dept</span></div>
+        <div><span class="kw-purple">HAVING</span> <span class="kw-green">COUNT</span>(*) &gt; <span class="kw-num">5</span>;</div>
+      </div>
+      <div style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;">💡 GROUP BY collapses rows. HAVING filters groups (like WHERE but for aggregates).</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ S5: JOINS -->
+<section id="s5" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">05 — JOINS</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;color:var(--text-primary);">Joining Tables</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:16px;margin-bottom:28px;">
+
+    <!-- INNER JOIN -->
+    <div class="card" style="padding:24px;border-top:3px solid #8b5cf6;text-align:center;">
+      <div style="position:relative;width:100px;height:60px;margin:0 auto 12px;">
+        <div style="position:absolute;left:0;top:0;width:60px;height:60px;border-radius:50%;background:rgba(139,92,246,0.3);border:2px solid rgba(139,92,246,0.5);"></div>
+        <div style="position:absolute;right:0;top:0;width:60px;height:60px;border-radius:50%;background:rgba(6,182,212,0.3);border:2px solid rgba(6,182,212,0.5);"></div>
+        <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:24px;height:40px;background:rgba(255,255,255,0.25);border-radius:0;clip-path:ellipse(12px 20px at 50% 50%);"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#a78bfa;margin-bottom:6px;">INNER JOIN</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);">Rows that match in <strong>both</strong> tables</div>
+    </div>
+
+    <!-- LEFT JOIN -->
+    <div class="card" style="padding:24px;border-top:3px solid #3b82f6;text-align:center;">
+      <div style="position:relative;width:100px;height:60px;margin:0 auto 12px;">
+        <div style="position:absolute;left:0;top:0;width:60px;height:60px;border-radius:50%;background:rgba(59,130,246,0.5);border:2px solid rgba(59,130,246,0.7);"></div>
+        <div style="position:absolute;right:0;top:0;width:60px;height:60px;border-radius:50%;background:rgba(6,182,212,0.2);border:2px solid rgba(6,182,212,0.3);"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#60a5fa;margin-bottom:6px;">LEFT JOIN</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);"><strong>All</strong> from left + matches from right</div>
+    </div>
+
+    <!-- RIGHT JOIN -->
+    <div class="card" style="padding:24px;border-top:3px solid #10b981;text-align:center;">
+      <div style="position:relative;width:100px;height:60px;margin:0 auto 12px;">
+        <div style="position:absolute;left:0;top:0;width:60px;height:60px;border-radius:50%;background:rgba(59,130,246,0.2);border:2px solid rgba(59,130,246,0.3);"></div>
+        <div style="position:absolute;right:0;top:0;width:60px;height:60px;border-radius:50%;background:rgba(16,185,129,0.5);border:2px solid rgba(16,185,129,0.7);"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#34d399;margin-bottom:6px;">RIGHT JOIN</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);">Matches from left + <strong>all</strong> from right</div>
+    </div>
+
+    <!-- FULL JOIN -->
+    <div class="card" style="padding:24px;border-top:3px solid #f59e0b;text-align:center;">
+      <div style="position:relative;width:100px;height:60px;margin:0 auto 12px;">
+        <div style="position:absolute;left:0;top:0;width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.4);border:2px solid rgba(245,158,11,0.6);"></div>
+        <div style="position:absolute;right:0;top:0;width:60px;height:60px;border-radius:50%;background:rgba(245,158,11,0.4);border:2px solid rgba(245,158,11,0.6);"></div>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-weight:700;color:#fcd34d;margin-bottom:6px;">FULL JOIN</div>
+      <div style="font-size:0.75rem;color:var(--text-secondary);"><strong>All</strong> rows from both tables</div>
+    </div>
+
+  </div>
+
+  <div class="card" style="padding:24px;position:relative;">
+    <div style="font-size:0.7rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:14px;">EXAMPLE — LEFT JOIN</div>
+    <div class="code-block" style="padding:16px;position:relative;">
+      <button class="copy-btn" onclick="copyCode(this)">copy</button>
+      <div><span class="kw-blue">SELECT</span> <span class="kw-amber">u.name</span>, <span class="kw-amber">o.total</span></div>
+      <div><span class="kw-green">FROM</span>   <span class="kw-str">users</span> <span class="kw-cyan">u</span></div>
+      <div><span class="kw-blue">LEFT JOIN</span> <span class="kw-str">orders</span> <span class="kw-cyan">o</span> <span class="kw-blue">ON</span> <span class="kw-cyan">u</span>.<span class="kw-amber">id</span> = <span class="kw-cyan">o</span>.<span class="kw-amber">user_id</span>;</div>
+      <div style="margin-top:8px;"><span class="kw-cmt">-- Returns all users, even those with no orders (NULL for o.total)</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ S6: DATA TYPES -->
+<section id="s6" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">06 — DATA TYPES</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;color:var(--text-primary);">Common Data Types</h2>
+
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:0.85rem;">
+      <thead>
+        <tr style="background:rgba(6,182,212,0.08);border-bottom:2px solid rgba(6,182,212,0.2);">
+          <th style="padding:12px 16px;text-align:left;font-family:'JetBrains Mono',monospace;color:#67e8f9;font-size:0.72rem;letter-spacing:0.1em;">TYPE</th>
+          <th style="padding:12px 16px;text-align:left;font-family:'JetBrains Mono',monospace;color:#67e8f9;font-size:0.72rem;letter-spacing:0.1em;">STORES</th>
+          <th style="padding:12px 16px;text-align:left;font-family:'JetBrains Mono',monospace;color:#67e8f9;font-size:0.72rem;letter-spacing:0.1em;">EXAMPLE</th>
+          <th style="padding:12px 16px;text-align:left;font-family:'JetBrains Mono',monospace;color:#67e8f9;font-size:0.72rem;letter-spacing:0.1em;">NOTE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:12px 16px;"><span class="cmd-badge" style="background:rgba(59,130,246,0.15);color:#60a5fa;">INT</span></td>
+          <td style="padding:12px 16px;color:var(--text-secondary);">Whole numbers</td>
+          <td style="padding:12px 16px;font-family:'JetBrains Mono',monospace;color:#fcd34d;font-size:0.78rem;">42, -7, 1000000</td>
+          <td style="padding:12px 16px;color:var(--text-muted);font-size:0.78rem;">Use for IDs, counts, ages</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:12px 16px;"><span class="cmd-badge" style="background:rgba(16,185,129,0.15);color:#34d399;">VARCHAR(n)</span></td>
+          <td style="padding:12px 16px;color:var(--text-secondary);">Variable-length text</td>
+          <td style="padding:12px 16px;font-family:'JetBrains Mono',monospace;color:#86efac;font-size:0.78rem;">'Alice', 'hello@x.com'</td>
+          <td style="padding:12px 16px;color:var(--text-muted);font-size:0.78rem;">n = max characters</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:12px 16px;"><span class="cmd-badge" style="background:rgba(245,158,11,0.15);color:#fcd34d;">DECIMAL(p,s)</span></td>
+          <td style="padding:12px 16px;color:var(--text-secondary);">Precise decimals</td>
+          <td style="padding:12px 16px;font-family:'JetBrains Mono',monospace;color:#fcd34d;font-size:0.78rem;">99.95, 1234.56</td>
+          <td style="padding:12px 16px;color:var(--text-muted);font-size:0.78rem;">Use for money/prices</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:12px 16px;"><span class="cmd-badge" style="background:rgba(139,92,246,0.15);color:#a78bfa;">DATE</span></td>
+          <td style="padding:12px 16px;color:var(--text-secondary);">Calendar date</td>
+          <td style="padding:12px 16px;font-family:'JetBrains Mono',monospace;color:#86efac;font-size:0.78rem;">'2025-06-18'</td>
+          <td style="padding:12px 16px;color:var(--text-muted);font-size:0.78rem;">YYYY-MM-DD format</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:12px 16px;"><span class="cmd-badge" style="background:rgba(139,92,246,0.15);color:#a78bfa;">DATETIME</span></td>
+          <td style="padding:12px 16px;color:var(--text-secondary);">Date + time</td>
+          <td style="padding:12px 16px;font-family:'JetBrains Mono',monospace;color:#86efac;font-size:0.78rem;">'2025-06-18 09:30:00'</td>
+          <td style="padding:12px 16px;color:var(--text-muted);font-size:0.78rem;">Full timestamp</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:12px 16px;"><span class="cmd-badge" style="background:rgba(16,185,129,0.15);color:#34d399;">BOOLEAN</span></td>
+          <td style="padding:12px 16px;color:var(--text-secondary);">True/false</td>
+          <td style="padding:12px 16px;font-family:'JetBrains Mono',monospace;color:#fcd34d;font-size:0.78rem;">TRUE / FALSE / 1 / 0</td>
+          <td style="padding:12px 16px;color:var(--text-muted);font-size:0.78rem;">Some DBs use TINYINT(1)</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 16px;"><span class="cmd-badge" style="background:rgba(6,182,212,0.15);color:#67e8f9;">TEXT</span></td>
+          <td style="padding:12px 16px;color:var(--text-secondary);">Long text</td>
+          <td style="padding:12px 16px;font-family:'JetBrains Mono',monospace;color:#86efac;font-size:0.78rem;">'Long description...'</td>
+          <td style="padding:12px 16px;color:var(--text-muted);font-size:0.78rem;">No length limit, slower</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ S7: BEST PRACTICES -->
+<section id="s7" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">07 — BEST PRACTICES</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;color:var(--text-primary);">Quick Tips & Best Practices</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+
+    <div class="card" style="padding:20px;display:flex;gap:14px;align-items:flex-start;border-left:3px solid #ef4444;">
+      <div style="font-size:1.4rem;flex-shrink:0;">⚠️</div>
+      <div>
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;font-size:0.9rem;">Always use WHERE with DELETE/UPDATE</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">Without WHERE, you modify or delete <em>every</em> row in the table.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;display:flex;gap:14px;align-items:flex-start;border-left:3px solid #f59e0b;">
+      <div style="font-size:1.4rem;flex-shrink:0;">🚫</div>
+      <div>
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;font-size:0.9rem;">Avoid SELECT * in production</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">Name specific columns. It's faster, clearer, and won't break when schema changes.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;display:flex;gap:14px;align-items:flex-start;border-left:3px solid #3b82f6;">
+      <div style="font-size:1.4rem;flex-shrink:0;">📌</div>
+      <div>
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;font-size:0.9rem;">Use indexes on filter columns</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">Columns used in WHERE and JOIN should be indexed for performance.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;display:flex;gap:14px;align-items:flex-start;border-left:3px solid #10b981;">
+      <div style="font-size:1.4rem;flex-shrink:0;">📋</div>
+      <div>
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;font-size:0.9rem;">Use aliases for readability</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">
+          <span style="font-family:'JetBrains Mono',monospace;color:#60a5fa;">SELECT COUNT(*) AS total_users</span> is cleaner than no alias.
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;display:flex;gap:14px;align-items:flex-start;border-left:3px solid #8b5cf6;">
+      <div style="font-size:1.4rem;flex-shrink:0;">🔤</div>
+      <div>
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;font-size:0.9rem;">Uppercase SQL keywords</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">Convention: <span style="font-family:'JetBrains Mono',monospace;color:#60a5fa;">SELECT</span> not <span style="font-family:'JetBrains Mono',monospace;color:var(--text-muted);">select</span>. Easier to scan.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;display:flex;gap:14px;align-items:flex-start;border-left:3px solid #06b6d4;">
+      <div style="font-size:1.4rem;flex-shrink:0;">💾</div>
+      <div>
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;font-size:0.9rem;">Test with SELECT before modifying</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">Run a SELECT with your WHERE first to verify the target rows before UPDATE/DELETE.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;display:flex;gap:14px;align-items:flex-start;border-left:3px solid #fcd34d;">
+      <div style="font-size:1.4rem;flex-shrink:0;">🔢</div>
+      <div>
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;font-size:0.9rem;">Use LIMIT when exploring</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">Add LIMIT 100 while learning to avoid pulling millions of rows accidentally.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;display:flex;gap:14px;align-items:flex-start;border-left:3px solid #34d399;">
+      <div style="font-size:1.4rem;flex-shrink:0;">📦</div>
+      <div>
+        <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;font-size:0.9rem;">Normalize your schema</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">Store each fact once. Use foreign keys to link tables rather than duplicating data.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ S8: TRY IT -->
+<section id="s8" class="reveal" style="padding:60px 0 80px;">
+  <div class="sec-num">08 — SANDBOX</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 8px;color:var(--text-primary);">Try It Yourself</h2>
+  <p style="color:var(--text-secondary);margin-bottom:24px;font-size:0.9rem;">Experiment with SQL examples below — edit and run any query.</p>
+
+  <div class="card" style="padding:28px;border:1px solid rgba(59,130,246,0.2);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-size:0.7rem;color:#60a5fa;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;">SQL EDITOR</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button onclick="loadExample(0)" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);color:#60a5fa;padding:4px 10px;border-radius:4px;font-size:0.7rem;font-family:'JetBrains Mono',monospace;cursor:pointer;">Basic SELECT</button>
+        <button onclick="loadExample(1)" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#34d399;padding:4px 10px;border-radius:4px;font-size:0.7rem;font-family:'JetBrains Mono',monospace;cursor:pointer;">Aggregation</button>
+        <button onclick="loadExample(2)" style="background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.25);color:#a78bfa;padding:4px 10px;border-radius:4px;font-size:0.7rem;font-family:'JetBrains Mono',monospace;cursor:pointer;">JOIN</button>
+      </div>
+    </div>
+
+    <textarea id="sql-demo" spellcheck="false">SELECT name, age, city
+FROM users
+WHERE age > 25
+ORDER BY age DESC
+LIMIT 5;</textarea>
+
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0;">
+      <div style="font-size:0.7rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">→ SIMULATED OUTPUT</div>
+      <button class="run-btn" onclick="runDemo()">▶ Run Query</button>
+    </div>
+
+    <div id="sql-output">Click "Run Query" to see simulated results...</div>
+  </div>
+</section>
+
+</div><!-- /max-width -->
+
+<!-- ═══════════════════════════════════════════════════ FOOTER -->
+<footer style="background:rgba(0,0,0,0.3);border-top:1px solid var(--border-subtle);padding:40px 20px;text-align:center;">
+  <div style="max-width:700px;margin:0 auto;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--text-muted);letter-spacing:0.1em;margin-bottom:12px;">PRACTICE ON FREE PLATFORMS</div>
+    <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+      <a href="https://www.db-fiddle.com" target="_blank" style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);color:#60a5fa;padding:8px 20px;border-radius:6px;text-decoration:none;font-size:0.82rem;font-family:'JetBrains Mono',monospace;transition:all 0.2s;" onmouseover="this.style.background='rgba(59,130,246,0.15)'" onmouseout="this.style.background='rgba(59,130,246,0.08)'">DB-Fiddle</a>
+      <a href="https://sqliteonline.com" target="_blank" style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);color:#34d399;padding:8px 20px;border-radius:6px;text-decoration:none;font-size:0.82rem;font-family:'JetBrains Mono',monospace;transition:all 0.2s;" onmouseover="this.style.background='rgba(16,185,129,0.15)'" onmouseout="this.style.background='rgba(16,185,129,0.08)'">SQLiteOnline</a>
+      <a href="https://leetcode.com/problemset/database/" target="_blank" style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);color:#fcd34d;padding:8px 20px;border-radius:6px;text-decoration:none;font-size:0.82rem;font-family:'JetBrains Mono',monospace;transition:all 0.2s;" onmouseover="this.style.background='rgba(245,158,11,0.15)'" onmouseout="this.style.background='rgba(245,158,11,0.08)'">LeetCode SQL</a>
+      <a href="https://www.w3schools.com/sql/" target="_blank" style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);color:#a78bfa;padding:8px 20px;border-radius:6px;text-decoration:none;font-size:0.82rem;font-family:'JetBrains Mono',monospace;transition:all 0.2s;" onmouseover="this.style.background='rgba(139,92,246,0.15)'" onmouseout="this.style.background='rgba(139,92,246,0.08)'">W3Schools SQL</a>
+    </div>
+    <div style="font-size:0.78rem;color:var(--text-muted);">🔖 Bookmark this page &nbsp;•&nbsp; Made with ♥ for SQL beginners everywhere</div>
+    <div style="margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:0.65rem;color:var(--text-muted);opacity:0.5;">SQL in a Nutshell — Beginner Edition</div>
+  </div>
+</footer>
+
+<style>
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+/* Responsive grid fixes */
+@media (max-width: 640px) {
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns:repeat(4"] {
+    grid-template-columns: 1fr !important;
+  }
+  [style*="grid-template-columns:repeat(2"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+</style>
+
+<script>
+  // ── Theme toggle ──────────────────────────────────────────
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
+    html.classList.toggle('dark', !isDark);
+    html.classList.toggle('light', isDark);
+    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+  }
+
+  // ── Scroll to section ────────────────────────────────────
+  function scrollTo(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ── Reveal on scroll ─────────────────────────────────────
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) e.target.classList.add('visible');
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // ── TOC active state ──────────────────────────────────────
+  const sections = ['hero','s1','s2','s3','s4','s5','s6','s7','s8'];
+  const dots = document.querySelectorAll('.toc-dot');
+
+  const tocObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = sections.indexOf(e.target.id);
+        dots.forEach((d,i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.3 });
+
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) tocObserver.observe(el);
+  });
+
+  // ── Copy code ────────────────────────────────────────────
+  function copyCode(btn) {
+    const block = btn.closest('.code-block');
+    const text = Array.from(block.childNodes)
+      .filter(n => n.nodeType !== Node.ELEMENT_NODE || !n.classList.contains('copy-btn'))
+      .map(n => n.textContent)
+      .join('\n')
+      .trim();
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+
+  // ── SQL demo ─────────────────────────────────────────────
+  const examples = [
+    `SELECT name, age, city\nFROM users\nWHERE age > 25\nORDER BY age DESC\nLIMIT 5;`,
+    `SELECT department,\n       COUNT(*) AS employees,\n       AVG(salary) AS avg_salary\nFROM employees\nGROUP BY department\nHAVING COUNT(*) > 3\nORDER BY avg_salary DESC;`,
+    `SELECT u.name, o.order_date, o.total\nFROM users u\nLEFT JOIN orders o ON u.id = o.user_id\nWHERE o.total > 100\nORDER BY o.order_date DESC;`
+  ];
+
+  function loadExample(i) {
+    document.getElementById('sql-demo').value = examples[i];
+    document.getElementById('sql-output').textContent = 'Click "Run Query" to see simulated results...';
+    document.getElementById('sql-output').style.color = '#34d399';
+  }
+
+  function runDemo() {
+    const query = document.getElementById('sql-demo').value.trim().toLowerCase();
+    const out = document.getElementById('sql-output');
+
+    if (query.includes('group by') || query.includes('count') || query.includes('avg')) {
+      out.textContent = [
+        '  department    | employees | avg_salary',
+        '  ─────────────┼───────────┼───────────',
+        '  Engineering   |     12    |  95,400.00',
+        '  Marketing     |      8    |  72,200.00',
+        '  Data Science  |      6    |  88,750.00',
+        '  Operations    |      5    |  65,100.00',
+        '',
+        '  [4 rows returned in 0.003s]'
+      ].join('\n');
+    } else if (query.includes('join')) {
+      out.textContent = [
+        '  name          | order_date  | total',
+        '  ─────────────┼─────────────┼───────',
+        '  Alice Wong    | 2025-06-15  | 249.90',
+        '  Bob Tan       | 2025-06-12  | 189.50',
+        '  Carol Lim     | 2025-06-10  | 312.00',
+        '  Dave Ng       | 2025-06-08  | 145.75',
+        '',
+        '  [4 rows returned in 0.006s]'
+      ].join('\n');
+    } else if (query.includes('delete') || query.includes('drop')) {
+      out.style.color = '#f87171';
+      out.textContent = '  ⚠️  Simulated: DELETE/DROP not executed in sandbox mode.\n  (In production, this would permanently modify your data!)';
+      return;
+    } else if (query.includes('insert')) {
+      out.style.color = '#34d399';
+      out.textContent = '  ✓ Query OK. 1 row inserted.\n  [Affected rows: 1 — 0.001s]';
+      return;
+    } else if (query.includes('update')) {
+      out.style.color = '#fcd34d';
+      out.textContent = '  ✓ Query OK. Rows updated.\n  [Affected rows: 3 — 0.002s]';
+      return;
+    } else {
+      out.textContent = [
+        '  id  | name         | age | city',
+        '  ────┼──────────────┼─────┼──────────',
+        '   1  | Alice Wong   |  31 | Kuala Lumpur',
+        '   2  | Bob Tan      |  28 | Singapore',
+        '   3  | Carol Lim    |  35 | Penang',
+        '   4  | Dave Ng      |  27 | Johor Bahru',
+        '   5  | Eve Hassan   |  42 | Kuching',
+        '',
+        '  [5 rows returned in 0.002s]'
+      ].join('\n');
+    }
+    out.style.color = '#34d399';
+  }
+
+  // ── Animate diff bars on visible ────────────────────────
+  const diffObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.diff-fill').forEach(fill => {
+          const w = fill.style.width;
+          fill.style.width = '0%';
+          setTimeout(() => { fill.style.width = w; }, 100);
+        });
+      }
+    });
+  }, { threshold: 0.2 });
+
+  document.querySelectorAll('#s3').forEach(el => diffObserver.observe(el));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Infographic Factsheets — Personal Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --font-body: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+
+    --bg: #0b1220;
+    --surface: #111b2e;
+    --surface-elevated: #162238;
+    --border: rgba(255, 255, 255, 0.07);
+    --border-bright: rgba(255, 255, 255, 0.14);
+    --text: #e8edf5;
+    --text-dim: #8fa3be;
+    --accent: #d4a73a;
+    --accent-dim: rgba(212, 167, 58, 0.1);
+    --nr: #5eb8d4;
+    --nr-dim: rgba(94, 184, 212, 0.1);
+    --lte: #6ec9a0;
+    --lte-dim: rgba(110, 201, 160, 0.1);
+    --sql: #d4a73a;
+    --sql-dim: rgba(212, 167, 58, 0.1);
+    --lb: #f0a060;
+    --lb-dim: rgba(240, 160, 96, 0.1);
+    --py: #6b9cf5;
+    --py-dim: rgba(107, 156, 245, 0.1);
+    --linux: #f0a840;
+    --linux-dim: rgba(240, 168, 64, 0.1);
+    --bash: #4ade80;
+    --bash-dim: rgba(74, 222, 128, 0.1);
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f1ea;
+      --surface: #ffffff;
+      --surface-elevated: #faf8f4;
+      --border: rgba(0, 0, 0, 0.08);
+      --border-bright: rgba(0, 0, 0, 0.14);
+      --text: #1a2332;
+      --text-dim: #5c6b7e;
+      --accent: #9a7220;
+      --accent-dim: rgba(154, 114, 32, 0.08);
+      --nr: #1a6f8a;
+      --nr-dim: rgba(26, 111, 138, 0.08);
+      --lte: #2a7a5c;
+      --lte-dim: rgba(42, 122, 92, 0.08);
+      --sql: #9a7220;
+      --sql-dim: rgba(154, 114, 32, 0.08);
+      --lb: #c2610a;
+      --lb-dim: rgba(194, 97, 10, 0.08);
+      --py: #2563eb;
+      --py-dim: rgba(37, 99, 235, 0.08);
+      --linux: #b45309;
+      --linux-dim: rgba(180, 83, 9, 0.08);
+      --bash: #15803d;
+      --bash-dim: rgba(21, 128, 61, 0.08);
+    }
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 15% 0%, var(--accent-dim) 0%, transparent 55%),
+      radial-gradient(ellipse at 85% 100%, var(--nr-dim) 0%, transparent 45%),
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: auto, auto, 48px 48px, 48px 48px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 28px 20px 36px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0.001; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate {
+    opacity: 1;
+    animation: fadeUp 0.4s ease-out both;
+    animation-delay: calc(var(--i, 0) * 0.05s);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate { animation: none; }
+  }
+
+  .page {
+    max-width: 680px;
+    margin: 0 auto;
+  }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 20px 18px 22px;
+    margin-bottom: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-elevated);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, var(--accent-dim) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero > * { position: relative; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .eyebrow::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  h1 {
+    font-family: var(--font-body);
+    font-size: clamp(1.55rem, 4vw, 1.9rem);
+    font-weight: 800;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+    text-wrap: balance;
+  }
+
+  .hero-lead {
+    font-size: 0.88rem;
+    color: var(--text-dim);
+    max-width: 44ch;
+    margin: 0 auto;
+    line-height: 1.45;
+  }
+
+  .hero-meta {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .hero-meta span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .hero-meta strong {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* Section label */
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    padding-left: 2px;
+  }
+
+  /* Cards */
+  .cards {
+    display: grid;
+    gap: 8px;
+  }
+
+  @media (min-width: 640px) {
+    .cards {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  .ve-card {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    transition: border-color 0.2s, background 0.2s, transform 0.2s;
+    min-width: 0;
+  }
+
+  .ve-card:hover {
+    border-color: var(--border-bright);
+    background: var(--surface-elevated);
+    transform: translateY(-2px);
+  }
+
+  .ve-card--nr { border-left: 3px solid var(--nr); }
+  .ve-card--lte { border-left: 3px solid var(--lte); }
+  .ve-card--sql { border-left: 3px solid var(--sql); }
+  .ve-card--lb { border-left: 3px solid var(--lb); }
+  .ve-card--py { border-left: 3px solid var(--py); }
+  .ve-card--linux { border-left: 3px solid var(--linux); }
+  .ve-card--bash { border-left: 3px solid var(--bash); }
+
+  .ve-card--nr:hover { background: var(--nr-dim); }
+  .ve-card--lte:hover { background: var(--lte-dim); }
+  .ve-card--sql:hover { background: var(--sql-dim); }
+  .ve-card--lb:hover { background: var(--lb-dim); }
+  .ve-card--py:hover { background: var(--py-dim); }
+  .ve-card--linux:hover { background: var(--linux-dim); }
+  .ve-card--bash:hover { background: var(--bash-dim); }
+
+  .card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .card-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  .ve-card--nr .card-tag { background: var(--nr-dim); color: var(--nr); }
+  .ve-card--lte .card-tag { background: var(--lte-dim); color: var(--lte); }
+  .ve-card--sql .card-tag { background: var(--sql-dim); color: var(--sql); }
+  .ve-card--lb .card-tag { background: var(--lb-dim); color: var(--lb); }
+  .ve-card--py .card-tag { background: var(--py-dim); color: var(--py); }
+  .ve-card--linux .card-tag { background: var(--linux-dim); color: var(--linux); }
+  .ve-card--bash .card-tag { background: var(--bash-dim); color: var(--bash); }
+
+  .card-title {
+    font-family: var(--font-body);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 3px;
+  }
+
+  .ve-card--nr .card-title { color: var(--nr); }
+  .ve-card--lte .card-title { color: var(--lte); }
+  .ve-card--sql .card-title { color: var(--sql); }
+  .ve-card--lb .card-title { color: var(--lb); }
+  .ve-card--py .card-title { color: var(--py); }
+  .ve-card--linux .card-title { color: var(--linux); }
+  .ve-card--bash .card-title { color: var(--bash); }
+
+  .card-desc {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    line-height: 1.4;
+  }
+
+  .card-arrow {
+    font-family: var(--font-mono);
+    font-size: 14px;
+    color: var(--text-dim);
+    transition: color 0.2s, transform 0.2s;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .ve-card:hover .card-arrow {
+    color: var(--accent);
+    transform: translateX(3px);
+  }
+
+  /* Footer */
+  footer {
+    text-align: center;
+    margin-top: 22px;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 0.02em;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+
+    <header class="hero animate" style="--i: 0">
+      <p class="eyebrow">Personal Archive</p>
+      <h1>Infographic Factsheets</h1>
+      <p class="hero-lead">Self-contained reference pages for telecom engineering and data fundamentals — designed for quick lookup, not scrolling manuals.</p>
+      <div class="hero-meta">
+        <span><strong>7</strong> guides</span>
+        <span><strong>Fadzli Abdullah</strong></span>
+        <span><strong>2026</strong></span>
+      </div>
+    </header>
+
+    <p class="section-label animate" style="--i: 1">Browse collection</p>
+
+    <nav class="cards" aria-label="Factsheet collection">
+      <a href="nr-factsheet.html" class="ve-card ve-card--nr animate" style="--i: 2">
+        <div class="card-top">
+          <span class="card-tag">5G NR</span>
+          <span class="card-arrow" aria-hidden="true">→</span>
+        </div>
+        <h2 class="card-title">5G NR in a Nutshell</h2>
+        <p class="card-desc">Engineer's quick reference — numerology, massive MIMO, gNB/5GC architecture, KPIs, and procedures.</p>
+      </a>
+
+      <a href="lte-factsheet.html" class="ve-card ve-card--lte animate" style="--i: 3">
+        <div class="card-top">
+          <span class="card-tag">LTE</span>
+          <span class="card-arrow" aria-hidden="true">→</span>
+        </div>
+        <h2 class="card-title">LTE in a Nutshell</h2>
+        <p class="card-desc">Engineer's quick reference — air interface, protocol stack, KPIs, handover, and channel structure.</p>
+      </a>
+
+      <a href="sql-factsheet.html" class="ve-card ve-card--sql animate" style="--i: 4">
+        <div class="card-top">
+          <span class="card-tag">SQL</span>
+          <span class="card-arrow" aria-hidden="true">→</span>
+        </div>
+        <h2 class="card-title">SQL in a Nutshell</h2>
+        <p class="card-desc">Beginner edition — SELECT, JOINs, aggregates, data types, and practical query patterns.</p>
+      </a>
+
+      <a href="link-budget-factsheet.html" class="ve-card ve-card--lb animate" style="--i: 5">
+        <div class="card-top">
+          <span class="card-tag">Link Budget</span>
+          <span class="card-arrow" aria-hidden="true">→</span>
+        </div>
+        <h2 class="card-title">Link Budget in a Nutshell</h2>
+        <p class="card-desc">Engineer edition — path loss, margins, LTE/5G NR models, COST-231, and 3GPP TR 38.901.</p>
+      </a>
+
+      <a href="python-programming-factsheet.html" class="ve-card ve-card--py animate" style="--i: 6">
+        <div class="card-top">
+          <span class="card-tag">Python</span>
+          <span class="card-arrow" aria-hidden="true">→</span>
+        </div>
+        <h2 class="card-title">Python Programming in a Nutshell</h2>
+        <p class="card-desc">Engineer edition — language model, data types, OOP, async, standard library, and packaging.</p>
+      </a>
+
+      <a href="linux-factsheet.html" class="ve-card ve-card--linux animate" style="--i: 7">
+        <div class="card-top">
+          <span class="card-tag">Linux</span>
+          <span class="card-arrow" aria-hidden="true">→</span>
+        </div>
+        <h2 class="card-title">Linux in a Nutshell</h2>
+        <p class="card-desc">Engineer edition — kernel architecture, VFS, process model, performance metrics, and admin workflows.</p>
+      </a>
+
+      <a href="bash-scripting-factsheet.html" class="ve-card ve-card--bash animate" style="--i: 8">
+        <div class="card-top">
+          <span class="card-tag">Bash</span>
+          <span class="card-arrow" aria-hidden="true">→</span>
+        </div>
+        <h2 class="card-title">Bash Scripting in a Nutshell</h2>
+        <p class="card-desc">Engineer edition — variables, control flow, functions, traps, error handling, and GNU Bash 5 builtins.</p>
+      </a>
+    </nav>
+
+    <footer class="animate" style="--i: 9">
+      &copy; 2026 Fadzli Abdullah &middot; Personal Archieve
+    </footer>
+
+  </div>
+</body>
+</html>

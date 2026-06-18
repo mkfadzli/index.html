@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Link Budget in a Nutshell – Engineer Edition</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: {
+    mono: ['JetBrains Mono','Fira Code','monospace'],
+    sans: ['Inter','system-ui','sans-serif']
+  }}}}
+</script>
+<style>
+:root {
+  --bg-primary:   #04080e;
+  --bg-card:      #0a1220;
+  --bg-card-hover:#0e1928;
+  --border-subtle: rgba(255,255,255,0.07);
+  --text-primary:  #dce8f8;
+  --text-secondary:#6e88a8;
+  --text-muted:    #3c5068;
+  --c-primary: #38bdf8;
+  --c-secondary: #34d399;
+  --c-accent: #a78bfa;
+  --c-mac: #2dd4bf;
+  --c-kpi: #facc15;
+  --c-warn: #f87171;
+  --c-proc: #fb923c;
+}
+.light {
+  --bg-primary:    #edf2f9;
+  --bg-card:       #ffffff;
+  --bg-card-hover: #f4f8ff;
+  --border-subtle: rgba(0,0,0,0.08);
+  --text-primary:  #0e1c2e;
+  --text-secondary:#3d5880;
+  --text-muted:    #90a8c0;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg-primary); color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  line-height: 1.6; transition: background 0.3s, color 0.3s;
+}
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: #1a2a40; border-radius: 10px; }
+
+.card {
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  border-radius: 12px; transition: all 0.25s ease;
+}
+.card:hover { background: var(--bg-card-hover); transform: translateY(-2px); }
+
+.badge {
+  display: inline-block; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.67rem; font-weight: 700; letter-spacing: 0.04em;
+  padding: 2px 8px; border-radius: 4px;
+}
+
+.reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+.sec-num {
+  font-family: 'JetBrains Mono', monospace; font-size: 0.63rem;
+  color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase;
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(rgba(56,189,248,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,0.04) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+[data-tip] { position: relative; cursor: help; }
+[data-tip]::after {
+  content: attr(data-tip); position: absolute; bottom: calc(100% + 6px);
+  left: 50%; transform: translateX(-50%); background: #0a1220;
+  color: #dce8f8; border: 1px solid rgba(56,189,248,0.25);
+  padding: 5px 10px; border-radius: 5px; font-size: 0.7rem;
+  white-space: nowrap; opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; z-index: 100; font-family: 'Inter', sans-serif;
+}
+[data-tip]:hover::after { opacity: 1; }
+
+#toc-panel {
+  position: fixed; left: 18px; top: 50%; transform: translateY(-50%);
+  z-index: 50; display: flex; flex-direction: column; gap: 8px;
+}
+.toc-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--text-muted); cursor: pointer; transition: all 0.2s; position: relative;
+}
+.toc-dot:hover, .toc-dot.active {
+  background: var(--c-primary); transform: scale(1.5);
+  box-shadow: 0 0 8px rgba(56,189,248,0.65);
+}
+.toc-dot::after {
+  content: attr(data-label); position: absolute; left: 18px; top: 50%;
+  transform: translateY(-50%); white-space: nowrap; font-size: 0.68rem;
+  color: var(--text-secondary); opacity: 0; pointer-events: none;
+  transition: opacity 0.2s; background: var(--bg-card);
+  padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); z-index: 10;
+}
+.toc-dot:hover::after { opacity: 1; }
+
+#theme-btn {
+  position: fixed; top: 18px; right: 18px; z-index: 100;
+  background: var(--bg-card); border: 1px solid var(--border-subtle);
+  color: var(--text-secondary); padding: 7px 14px; border-radius: 20px;
+  font-size: 0.73rem; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  transition: all 0.2s;
+}
+#theme-btn:hover { border-color: var(--c-primary); color: var(--c-primary); }
+
+.layer-row {
+  display: flex; align-items: stretch; border-radius: 8px;
+  overflow: hidden; border: 1px solid var(--border-subtle); margin-bottom: 6px;
+}
+.layer-label {
+  width: 90px; flex-shrink: 0; display: flex; align-items: center;
+  justify-content: center; font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em; padding: 10px 8px; text-align: center;
+}
+.layer-content { flex: 1; padding: 10px 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); }
+
+.proc-step { display: flex; gap: 12px; align-items: flex-start; padding: 11px 0; border-bottom: 1px solid var(--border-subtle); }
+.proc-step:last-child { border-bottom: none; }
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+}
+
+.copy-btn {
+  position: absolute; top: 10px; right: 10px;
+  background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25);
+  color: var(--c-primary); font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: all 0.2s; z-index: 5;
+}
+.copy-btn:hover { background: rgba(56,189,248,0.25); }
+.copy-btn.copied { color: #34d399; border-color: #34d399; background: rgba(52,211,153,0.12); }
+
+@media (max-width: 768px) { #toc-panel { display: none; } }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+</style>
+</head>
+<body>
+
+<!-- Theme Toggle -->
+<button id="theme-btn" onclick="toggleTheme()">
+  <span id="theme-icon">☀️</span>
+  <span id="theme-label">Light</span>
+</button>
+
+<!-- Floating TOC -->
+<nav id="toc-panel" aria-label="Sections">
+  <div class="toc-dot active" data-label="Home"         onclick="scrollToSec('hero')"></div>
+  <div class="toc-dot"        data-label="Overview"     onclick="scrollToSec('s1')"></div>
+  <div class="toc-dot"        data-label="Architecture" onclick="scrollToSec('s2')"></div>
+  <div class="toc-dot"        data-label="Mechanics"    onclick="scrollToSec('s3')"></div>
+  <div class="toc-dot"        data-label="Loss Stack"   onclick="scrollToSec('s4')"></div>
+  <div class="toc-dot"        data-label="KPIs"         onclick="scrollToSec('s5')"></div>
+  <div class="toc-dot"        data-label="Procedures"   onclick="scrollToSec('s6')"></div>
+  <div class="toc-dot"        data-label="Reference"    onclick="scrollToSec('s7')"></div>
+  <div class="toc-dot"        data-label="Cheatsheet"   onclick="scrollToSec('s8')"></div>
+</nav>
+
+<!-- HERO -->
+<section id="hero" class="hero-grid min-h-screen flex flex-col items-center justify-center px-6 py-24 relative overflow-hidden">
+  <div style="position:absolute;top:8%;left:10%;width:500px;height:500px;background:radial-gradient(circle,rgba(56,189,248,0.07),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:8%;right:8%;width:350px;height:350px;background:radial-gradient(circle,rgba(52,211,153,0.06),transparent 70%);pointer-events:none;"></div>
+
+  <div class="text-center max-w-3xl relative z-10 reveal">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.22);border-radius:20px;padding:4px 16px;margin-bottom:24px;">
+      <span style="width:6px;height:6px;background:var(--c-primary);border-radius:50%;animation:pulse 2s infinite;"></span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-primary);letter-spacing:0.1em;">RF PLANNING · 4G/5G · ENGINEER EDITION</span>
+    </div>
+
+    <h1 style="font-size:clamp(2.2rem,6vw,4rem);font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:16px;">
+      <span style="color:var(--text-primary);">Link Budget</span>
+      <span style="background:linear-gradient(135deg,var(--c-primary),var(--c-secondary));-webkit-background-clip:text;-webkit-text-fill-color:transparent;"> in a Nutshell</span><br>
+      <span style="color:var(--text-primary);">Radio Network Planning</span>
+    </h1>
+    <p style="font-size:1rem;color:var(--text-secondary);max-width:600px;margin:0 auto 32px;">
+      A systematic accounting of all power gains and losses in a radio link — from transmitter to receiver — used to determine maximum allowable path loss and cell coverage range.
+    </p>
+
+    <!-- Stat Cards -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;">
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--c-primary);">MAPL</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Max Allowable Path Loss</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--c-secondary);">EIRP</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Effective Isotropic Radiated Power</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--c-accent);">SINR</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">Target Signal-to-Interference Ratio</div>
+      </div>
+      <div class="card" style="padding:16px 12px;text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--c-kpi);">dB</div>
+        <div style="font-size:0.72rem;color:var(--text-secondary);margin-top:4px;">All values in logarithmic scale</div>
+      </div>
+    </div>
+
+    <button onclick="scrollToSec('s1')" style="background:var(--c-primary);color:#04080e;font-weight:700;font-size:0.82rem;padding:10px 28px;border-radius:8px;border:none;cursor:pointer;font-family:'JetBrains Mono',monospace;letter-spacing:0.05em;">EXPLORE FACTSHEET ↓</button>
+  </div>
+</section>
+
+<div style="max-width:960px;margin:0 auto;padding:0 20px;">
+
+<!-- S1: Overview -->
+<section id="s1" class="reveal" style="padding:64px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 01</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Overview — What is a Link Budget?</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">A power balance equation that defines the viability of a radio link. The output — MAPL — directly drives cell radius calculations in LTE, NR, and 5G planning.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;">
+    <div class="card" style="padding:22px;border-left:3px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">DEFINITION</div>
+      <p style="font-size:0.85rem;color:var(--text-secondary);">A <strong style="color:var(--text-primary);">link budget</strong> tabulates all gains (Tx power, antenna gain, diversity) and losses (path loss, cable loss, body loss, building penetration) between transmitter and receiver to determine whether a link closes at a given distance.</p>
+    </div>
+    <div class="card" style="padding:22px;border-left:3px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">PURPOSE IN NETWORK PLANNING</div>
+      <p style="font-size:0.85rem;color:var(--text-secondary);">Determines <strong style="color:var(--text-primary);">site density</strong> (ISD), <strong style="color:var(--text-primary);">coverage radius</strong>, and whether indoor/outdoor coverage targets are achievable before deployment. Used in both UL and DL directions independently.</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">KEY OUTPUT</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:1.1rem;font-weight:700;color:var(--c-accent);">MAPL (dB)</div>
+      <div style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;">Max Allowable Path Loss = EIRP − Rx Sensitivity − all margins</div>
+    </div>
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">LINK TYPES</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);">
+        <span data-tip="Base station to UE" style="color:var(--c-primary);font-family:'JetBrains Mono',monospace;">DL</span> Downlink &nbsp;|&nbsp; 
+        <span data-tip="UE to Base Station" style="color:var(--c-secondary);font-family:'JetBrains Mono',monospace;">UL</span> Uplink<br>
+        <span style="font-size:0.74rem;margin-top:6px;display:block;">UL often limits coverage (UE Tx power ≪ eNB/gNB)</span>
+      </div>
+    </div>
+    <div class="card" style="padding:18px;">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">PROPAGATION MODEL</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);">Okumura-Hata, COST-231, 3GPP TR 38.901, or ITU-R models map <span style="color:var(--c-kpi);font-family:'JetBrains Mono',monospace;">MAPL → Cell Radius</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- S2: Architecture / Budget Structure -->
+<section id="s2" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 02</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Link Budget Architecture</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">The complete signal chain from eNB/gNB PA output to UE demodulator, and the reverse UL path.</p>
+
+  <!-- DL Signal Flow -->
+  <div style="margin-bottom:24px;">
+    <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">DOWNLINK PATH — eNB/gNB → UE</div>
+    <div class="layer-row">
+      <div class="layer-label" style="background:rgba(56,189,248,0.12);color:var(--c-primary);">Tx Power</div>
+      <div class="layer-content">eNB Tx Power (e.g. <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-primary);">+46 dBm</span> for 20W per carrier) &nbsp;→&nbsp; Cable/Filter Loss &nbsp;→&nbsp; <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);" data-tip="Effective Isotropic Radiated Power">EIRP</span></div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-label" style="background:rgba(52,211,153,0.12);color:var(--c-secondary);">Gains</div>
+      <div class="layer-content">Tx Antenna Gain <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);">+18 dBi</span> &nbsp;|&nbsp; Beamforming Gain (NR) &nbsp;|&nbsp; MIMO spatial gain</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-label" style="background:rgba(247,129,57,0.12);color:var(--c-warn);">Losses</div>
+      <div class="layer-content">Free-Space PL &nbsp;|&nbsp; Shadow Fading Margin &nbsp;|&nbsp; Building Penetration Loss &nbsp;|&nbsp; Body Loss &nbsp;|&nbsp; Feeder/Jumper Loss</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-label" style="background:rgba(167,139,250,0.12);color:var(--c-accent);">Rx Side</div>
+      <div class="layer-content">UE Rx Antenna Gain &nbsp;|&nbsp; <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);" data-tip="Minimum detectable signal">Rx Sensitivity</span> &nbsp;|&nbsp; Interference Margin &nbsp;|&nbsp; <span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);">SINR Threshold</span></div>
+    </div>
+  </div>
+
+  <!-- UL Signal Flow -->
+  <div>
+    <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">UPLINK PATH — UE → eNB/gNB (often coverage-limiting)</div>
+    <div class="layer-row">
+      <div class="layer-label" style="background:rgba(56,189,248,0.12);color:var(--c-primary);">Tx Power</div>
+      <div class="layer-content">UE Max Tx Power <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-primary);">+23 dBm</span> (Power Class 3) &nbsp;|&nbsp; Body Loss <span class="badge" style="background:rgba(247,129,57,0.1);color:var(--c-warn);">−3 dB</span></div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-label" style="background:rgba(52,211,153,0.12);color:var(--c-secondary);">Gains</div>
+      <div class="layer-content">UE Antenna Gain <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);">0 dBi</span> (isotropic) &nbsp;|&nbsp; eNB Rx Diversity Gain &nbsp;|&nbsp; IRC / MMSE combining gain</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-label" style="background:rgba(247,129,57,0.12);color:var(--c-warn);">Losses</div>
+      <div class="layer-content">Path Loss &nbsp;|&nbsp; Shadow Margin &nbsp;|&nbsp; Penetration Loss &nbsp;|&nbsp; Feeder Loss (eNB side) &nbsp;|&nbsp; Interference Margin</div>
+    </div>
+    <div class="layer-row">
+      <div class="layer-label" style="background:rgba(167,139,250,0.12);color:var(--c-accent);">Rx Side</div>
+      <div class="layer-content">eNB <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);" data-tip="Noise Figure typically 2–5 dB for macro">Noise Figure</span> &nbsp;|&nbsp; Thermal Noise Floor &nbsp;|&nbsp; Required SINR &nbsp;|&nbsp; <span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);">MAPL_UL</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- S3: Core Mechanics — The MAPL Equation -->
+<section id="s3" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 03</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Core Mechanics — The MAPL Equation</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">The fundamental balance equation that every link budget reduces to.</p>
+
+  <!-- Master Formula -->
+  <div class="card" style="padding:24px;margin-bottom:20px;border-top:2px solid var(--c-primary);">
+    <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">MASTER LINK BUDGET EQUATION</div>
+    <div style="position:relative;">
+      <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+      <div style="font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,0.3);border:1px solid rgba(56,189,248,0.15);border-radius:8px;font-size:0.84rem;padding:20px;line-height:2.2;">
+        <div><span style="color:var(--c-kpi);">MAPL</span> <span style="color:var(--text-muted);">=</span> <span style="color:var(--c-primary);">EIRP</span> <span style="color:var(--c-secondary);">+ G_rx</span> <span style="color:var(--c-warn);">− Rx_Sensitivity</span> <span style="color:var(--c-warn);">− M_shadow</span> <span style="color:var(--c-warn);">− M_interference</span> <span style="color:var(--c-warn);">− L_penetration</span> <span style="color:var(--c-warn);">− L_body</span></div>
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border-subtle);">
+          <span style="color:var(--c-primary);">EIRP</span> <span style="color:var(--text-muted);">=</span> <span style="color:var(--text-secondary);">P_tx</span> <span style="color:var(--text-muted);">+</span> <span style="color:var(--c-secondary);">G_tx</span> <span style="color:var(--text-muted);">−</span> <span style="color:var(--c-warn);">L_feeder</span></div>
+        <div style="margin-top:6px;">
+          <span style="color:var(--c-warn);">Rx_Sensitivity</span> <span style="color:var(--text-muted);">=</span> <span style="color:var(--text-secondary);">Thermal_Noise + NF + Required_SINR</span></div>
+        <div style="margin-top:6px;">
+          <span style="color:var(--text-secondary);">Thermal_Noise</span> <span style="color:var(--text-muted);">=</span> <span style="color:var(--c-kpi);">−174 dBm/Hz</span> <span style="color:var(--text-muted);">+</span> <span style="color:var(--c-kpi);">10·log10(BW_Hz)</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Parameter breakdown 2-col -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="card" style="padding:22px;">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">GAIN COMPONENTS (+)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:0.82rem;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="Transmit power in dBm">P_tx</span>
+          <span style="color:var(--text-secondary);">Transmitter output power — eNB: +43–46 dBm, UE: +23 dBm (PC3)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="Transmit antenna gain in dBi">G_tx</span>
+          <span style="color:var(--text-secondary);">Tx antenna gain — macro: 15–18 dBi, small cell: 5–8 dBi</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="Receive antenna gain in dBi">G_rx</span>
+          <span style="color:var(--text-secondary);">Rx antenna gain — eNB diversity: 2–3 dB, UE ≈ 0 dBi</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);flex-shrink:0;" data-tip="MIMO/beamforming gain">G_bf</span>
+          <span style="color:var(--text-secondary);">Beamforming/MIMO gain — NR mMIMO: up to +10 dB spatial</span>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:22px;">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">LOSS & MARGIN COMPONENTS (−)</div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:0.82rem;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="Log-normal shadow fading margin">M_sf</span>
+          <span style="color:var(--text-secondary);">Shadow fading margin — 6–10 dB @ 95% coverage probability</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="Indoor building penetration loss">L_bpl</span>
+          <span style="color:var(--text-secondary);">Building penetration — 10–25 dB (light) to 25–35 dB (deep indoor)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="Human body absorption">L_body</span>
+          <span style="color:var(--text-secondary);">Body loss — 3 dB typical for voice/data calls</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="Uplink interference margin">M_im</span>
+          <span style="color:var(--text-secondary);">Interference margin — 1–3 dB UL, 0 dB DL (SINR absorbs this)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- S4: Loss Stack / Propagation Models -->
+<section id="s4" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 04</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Propagation Loss Models</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:24px;">Converting MAPL to cell radius requires a path loss model. Each model trades accuracy for applicability range.</p>
+
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(56,189,248,0.12);color:var(--c-primary);">FSPL</div>
+    <div class="layer-content">
+      <span style="font-size:0.8rem;"><strong>Free-Space Path Loss</strong></span>
+      <span class="badge" style="background:rgba(56,189,248,0.08);color:var(--c-primary);" data-tip="In dB">20log(d) + 20log(f) + 92.4</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">LOS only, vacuum — theoretical baseline</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(52,211,153,0.12);color:var(--c-secondary);">Okumura-Hata</div>
+    <div class="layer-content">
+      <span style="font-size:0.8rem;"><strong>Empirical macro model</strong></span>
+      <span class="badge" style="background:rgba(52,211,153,0.08);color:var(--c-secondary);">150–1500 MHz</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">Urban/suburban/rural categories — LTE 700/800/900 MHz</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(167,139,250,0.12);color:var(--c-accent);">COST-231</div>
+    <div class="layer-content">
+      <span style="font-size:0.8rem;"><strong>Extended Hata for 2 GHz</strong></span>
+      <span class="badge" style="background:rgba(167,139,250,0.08);color:var(--c-accent);">1.5–2 GHz</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">LTE 1800/2100 MHz macro planning — most widely used in 4G</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(250,204,21,0.12);color:var(--c-kpi);">3GPP TR 38.901</div>
+    <div class="layer-content">
+      <span style="font-size:0.8rem;"><strong>5G NR stochastic channel model</strong></span>
+      <span class="badge" style="background:rgba(250,204,21,0.08);color:var(--c-kpi);">0.5–100 GHz</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">UMa / UMi / RMa / InH scenarios — NR planning standard</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(248,113,113,0.12);color:var(--c-warn);">ITU-R P.1546</div>
+    <div class="layer-content">
+      <span style="font-size:0.8rem;"><strong>Point-to-area prediction</strong></span>
+      <span class="badge" style="background:rgba(248,113,113,0.08);color:var(--c-warn);">30 MHz–3 GHz</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">Regulatory coverage prediction, terrain-sensitive</span>
+    </div>
+  </div>
+  <div class="layer-row">
+    <div class="layer-label" style="background:rgba(251,146,60,0.12);color:var(--c-proc);">3GPP UMa NR</div>
+    <div class="layer-content">
+      <span style="font-size:0.8rem;"><strong>NR Urban Macro formula</strong></span>
+      <span class="badge" style="background:rgba(251,146,60,0.08);color:var(--c-proc);">NLOS</span>
+      <span style="font-size:0.75rem;color:var(--text-muted);">PL = 13.54 + 39.08·log10(d) + 20·log10(f) − 0.6·(hUT−1.5)</span>
+    </div>
+  </div>
+
+  <div class="card" style="padding:18px 22px;margin-top:16px;border-left:3px solid var(--c-secondary);">
+    <div style="font-size:0.8rem;color:var(--text-secondary);">💡 <strong style="color:var(--text-primary);">MAPL → Cell Radius:</strong> Solve for <em>d</em> in the chosen propagation model where PL(d) = MAPL. For COST-231 Urban at 1800 MHz with MAPL = 135 dB → typical macro radius ≈ 0.8–1.2 km.</div>
+  </div>
+</section>
+
+<!-- S5: KPI Table -->
+<section id="s5" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 05</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Key Metrics & Target Values</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Typical LTE/NR planning targets — values vary by operator, band, and deployment scenario.</p>
+
+  <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border-subtle);">
+      <thead>
+        <tr style="background:rgba(250,204,21,0.06);border-bottom:2px solid rgba(250,204,21,0.18);">
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">PARAMETER</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">TYPICAL VALUE</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">WORST-CASE / LIMIT</th>
+          <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-kpi);letter-spacing:0.08em;">FORMULA / NOTE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>eNB Tx Power (4G)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">+46 dBm</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">+43 dBm</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">20W carrier → 43 dBm; per-carrier if split</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>UE Tx Power (PC3)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">+23 dBm</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">+20 dBm</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">3GPP PC3 = 200 mW; PC2 = 26 dBm (special)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>eNB Rx Sensitivity (LTE)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">−121 dBm</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">−118 dBm</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">10 MHz BW, QPSK 1/3, NF=3 dB</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Shadow Fading Margin</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">8 dB</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">10–12 dB</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">σ × Q⁻¹(p); σ≈8 dB urban, p=95%</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Building Penetration Loss</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">15–20 dB</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">25–35 dB</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Low-e glass, concrete walls; higher at mmWave</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>MAPL (Outdoor LTE 1800)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">135 dB</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">128 dB</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">EIRP − Rx_Sens − margins; UL often sets this</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Antenna Gain (Macro)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">+18 dBi</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">+15 dBi</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">65° H-plane 3-sector; mMIMO panel: 24 dBi+</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Interference Margin (UL)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">2 dB</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">3–5 dB</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">Load factor (η): M_im = −10·log10(1−η)</td>
+        </tr>
+        <tr style="border-bottom:1px solid var(--border-subtle);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Thermal Noise Density</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">−174 dBm/Hz</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">at 290 K</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">kT = 1.38×10⁻²³ × 290; varies with temp</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);">
+          <td style="padding:10px 14px;font-size:0.84rem;"><strong>Required SINR (QPSK 1/3)</strong></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">−3 dB</span></td>
+          <td style="padding:10px 14px;"><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">−6 dB (Turbo)</span></td>
+          <td style="padding:10px 14px;color:var(--text-muted);font-size:0.78rem;">MCS-dependent; 64QAM 2/3 needs +22 dB</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- S6: Procedures -->
+<section id="s6" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 06</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Planning Workflows</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Standard link budget workflows for both greenfield macro planning and indoor coverage design.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">OUTDOOR MACRO CELL PLANNING</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(56,189,248,0.12);color:var(--c-primary);">1</div>
+        <div style="font-size:0.8rem;"><strong>Define Service Requirements</strong> — Set target throughput/service (e.g. VoLTE, 2 Mbps DL), select MCS, derive required SINR threshold.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(56,189,248,0.12);color:var(--c-primary);">2</div>
+        <div style="font-size:0.8rem;"><strong>Compute EIRP</strong> — Sum Tx power + antenna gain − feeder/cable loss. Confirm regulatory EIRP limit compliance.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(56,189,248,0.12);color:var(--c-primary);">3</div>
+        <div style="font-size:0.8rem;"><strong>Calculate Rx Sensitivity</strong> — Thermal noise + noise figure + required SINR. Compute for both DL (UE) and UL (eNB) paths.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(56,189,248,0.12);color:var(--c-primary);">4</div>
+        <div style="font-size:0.8rem;"><strong>Apply Margins & Derive MAPL</strong> — Subtract shadow margin, interference margin, body loss. Take the lower of DL-MAPL vs UL-MAPL. Feed into propagation model → ISD.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">INDOOR COVERAGE (BPL SCENARIO)</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(52,211,153,0.12);color:var(--c-secondary);">1</div>
+        <div style="font-size:0.8rem;"><strong>Classify Target Environment</strong> — Categorise as outdoor-to-indoor, deep indoor, car-interior, or tunnel. Assign BPL: 10 / 20 / 25 / 30 dB accordingly.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(52,211,153,0.12);color:var(--c-secondary);">2</div>
+        <div style="font-size:0.8rem;"><strong>Compute Indoor MAPL</strong> — Apply outdoor MAPL then subtract BPL. Check if indoor coverage closes with existing macro. If not: IBS/DAS required.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(52,211,153,0.12);color:var(--c-secondary);">3</div>
+        <div style="font-size:0.8rem;"><strong>Size IBS/pRRU</strong> — Run separate indoor link budget for distributed antennas. Account for cable run loss, splitter loss, and DAS antenna gain (~5 dBi).</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(52,211,153,0.12);color:var(--c-secondary);">4</div>
+        <div style="font-size:0.8rem;"><strong>Validate with Drive/Walk Test</strong> — Compare predicted RSRP from model against measured CW/pilot signal. Tune BPL/shadow std-dev parameters.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- S7: Reference Items -->
+<section id="s7" class="reveal" style="padding:48px 0 32px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 07</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Reference — Scenarios & Loss Values</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Standard deployment scenarios with indicative loss and margin values used in real operator planning.</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">PENETRATION LOSS BY ENVIRONMENT</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.1);color:var(--c-primary);flex-shrink:0;" data-tip="Standard vehicle glass">Car</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">3–8 dB — standard automotive glass penetration</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);flex-shrink:0;" data-tip="Ground floor, near window">Indoor Shallow</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">10–15 dB — timber/brick, near window, ground floor</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="Typical mall or office">Indoor Mid</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">15–22 dB — concrete/steel structure, mid-floor</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;" data-tip="Basement, hospital, car park">Deep Indoor</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">25–35 dB — basement, low-e glass, reinforced concrete</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(250,204,21,0.1);color:var(--c-kpi);flex-shrink:0;" data-tip="Metro, road tunnel">Tunnel</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">30–50 dB — road/rail tunnel; leaky feeder or RRU required</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">SHADOW FADING MARGIN BY SCENARIO</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);flex-shrink:0;">Rural</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">σ = 6 dB → 7–8 dB margin at 90–95% coverage</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);flex-shrink:0;">Suburban</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">σ = 8 dB → 9–10 dB margin at 95% coverage</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);flex-shrink:0;">Urban</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">σ = 8–10 dB → 10–12 dB margin at 95–99% coverage</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);flex-shrink:0;">Dense Urban</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">σ = 10 dB → 12–14 dB margin at 99% coverage</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-secondary);flex-shrink:0;">Formula</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">M_sf = σ × Q⁻¹(p); Q⁻¹(0.95) ≈ 1.645, Q⁻¹(0.99) ≈ 2.326</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">FREQUENCY IMPACT ON LINK BUDGET</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="700/800/900 MHz">Sub-1 GHz</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Best MAPL — macro radius 2–5 km, superior indoor coverage</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="1800/2100/2600 MHz">1–3 GHz</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Capacity layer — radius 0.5–1.5 km, moderate penetration</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="3.5/4.9 GHz NR">C-Band</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">+20–25 dB FSPL vs 700 MHz — dense macro, BPL &gt;25 dB</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(167,139,250,0.1);color:var(--c-accent);flex-shrink:0;" data-tip="26/28/39 GHz">mmWave</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Extreme path loss; BPL &gt;40 dB; range &lt;200 m, LOS only</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:12px;">COMMON PLANNING MISTAKES</div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">UL/DL Mismatch</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Using DL-MAPL only — UL almost always more restrictive in 4G/5G macro</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">Wrong BPL</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Using generic 20 dB for high-spec office glass (actual: 30–35 dB)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">No Fading Margin</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Omitting shadow margin results in actual 50% coverage at cell edge</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(248,113,113,0.1);color:var(--c-warn);flex-shrink:0;">ISD Overestimate</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Hex grid oversimplification ignores terrain — validate with ray-trace</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- S8: Cheatsheet -->
+<section id="s8" class="reveal" style="padding:48px 0 48px;">
+  <div class="sec-num" style="margin-bottom:6px;">SECTION 08</div>
+  <h2 style="font-size:1.7rem;font-weight:800;letter-spacing:-0.01em;margin-bottom:6px;">Values Cheatsheet</h2>
+  <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:20px;">Quick-reference parameter cards for LTE macro, NR C-Band, IBS, and noise calculations.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-primary);">
+      <div style="font-size:0.68rem;color:var(--c-primary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">LTE 1800 MHz MACRO (OUTDOOR UL)</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div style="font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,0.25);border-radius:6px;padding:12px;font-size:0.75rem;line-height:1.9;">
+          <div style="display:flex;justify-content:space-between;"><span>UE Tx Power</span><span style="color:var(--c-primary);">+23 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>UE Antenna Gain</span><span style="color:var(--c-primary);">0 dBi</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Body Loss</span><span style="color:var(--c-warn);">−3 dB</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>EIRP_UL</span><span style="color:var(--c-secondary);">+20 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>eNB Rx Sensitivity</span><span style="color:var(--c-warn);">−121 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Shadow Margin</span><span style="color:var(--c-warn);">−9 dB</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:6px;margin-top:4px;"><span style="color:var(--c-kpi);">MAPL_UL</span><span style="color:var(--c-kpi);font-weight:700;">132 dB</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-secondary);">
+      <div style="font-size:0.68rem;color:var(--c-secondary);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">LTE 1800 MHz MACRO (OUTDOOR DL)</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div style="font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,0.25);border-radius:6px;padding:12px;font-size:0.75rem;line-height:1.9;">
+          <div style="display:flex;justify-content:space-between;"><span>eNB Tx Power</span><span style="color:var(--c-secondary);">+46 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Feeder Loss</span><span style="color:var(--c-warn);">−1.5 dB</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Tx Antenna Gain</span><span style="color:var(--c-secondary);">+18 dBi</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>EIRP_DL</span><span style="color:var(--c-secondary);">+62.5 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>UE Rx Sensitivity</span><span style="color:var(--c-warn);">−100 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Shadow + BPL</span><span style="color:var(--c-warn);">−9 dB</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:6px;margin-top:4px;"><span style="color:var(--c-kpi);">MAPL_DL</span><span style="color:var(--c-kpi);font-weight:700;">153.5 dB</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-accent);">
+      <div style="font-size:0.68rem;color:var(--c-accent);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">NR 3.5 GHz C-BAND (OUTDOOR UL)</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div style="font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,0.25);border-radius:6px;padding:12px;font-size:0.75rem;line-height:1.9;">
+          <div style="display:flex;justify-content:space-between;"><span>UE Tx Power (PC3)</span><span style="color:var(--c-accent);">+23 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Body Loss</span><span style="color:var(--c-warn);">−3 dB</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>gNB NF</span><span style="color:var(--c-warn);">3 dB</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>BW (100 MHz NR)</span><span style="color:var(--c-accent);">−164.8 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Required SINR</span><span style="color:var(--c-accent);">−3 dB (QPSK)</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Shadow Margin</span><span style="color:var(--c-warn);">−10 dB</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:6px;margin-top:4px;"><span style="color:var(--c-kpi);">MAPL_UL (NR)</span><span style="color:var(--c-kpi);font-weight:700;">~124 dB</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-kpi);">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">NOISE FLOOR CALCULATION</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div style="font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,0.25);border-radius:6px;padding:12px;font-size:0.75rem;line-height:1.9;">
+          <div style="display:flex;justify-content:space-between;"><span>Thermal Noise Density</span><span style="color:var(--c-kpi);">−174 dBm/Hz</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>BW 10 MHz (LTE)</span><span style="color:var(--c-kpi);">+70 dB·Hz</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Noise Floor @10 MHz</span><span style="color:var(--c-secondary);">−104 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>eNB Noise Figure</span><span style="color:var(--c-warn);">+3 dB</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Receiver Noise Floor</span><span style="color:var(--c-secondary);">−101 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Required SINR (QPSK)</span><span style="color:var(--c-warn);">−3 dB</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:6px;margin-top:4px;"><span style="color:var(--c-kpi);">Rx Sensitivity</span><span style="color:var(--c-kpi);font-weight:700;">−104 dBm</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-proc);">
+      <div style="font-size:0.68rem;color:var(--c-proc);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">INDOOR IBS / DAS LINK BUDGET</div>
+      <div style="position:relative;">
+        <button class="copy-btn" onclick="copyBlock(this)">copy</button>
+        <div style="font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,0.25);border-radius:6px;padding:12px;font-size:0.75rem;line-height:1.9;">
+          <div style="display:flex;justify-content:space-between;"><span>pRRU Tx Power</span><span style="color:var(--c-proc);">+24 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Cable + Splitter Loss</span><span style="color:var(--c-warn);">−6 dB</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>DAS Antenna Gain</span><span style="color:var(--c-proc);">+5 dBi</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>EIRP Indoor</span><span style="color:var(--c-proc);">+23 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Floor Attenuation</span><span style="color:var(--c-warn);">−15 dB/floor</span></div>
+          <div style="display:flex;justify-content:space-between;"><span>Target RSRP</span><span style="color:var(--c-secondary);">&gt; −95 dBm</span></div>
+          <div style="display:flex;justify-content:space-between;border-top:1px solid var(--border-subtle);padding-top:6px;margin-top:4px;"><span style="color:var(--c-kpi);">Coverage Radius</span><span style="color:var(--c-kpi);font-weight:700;">~25–40 m</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-warn);">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">RSRP TARGET vs COVERAGE CLASS</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-subtle);">
+          <span>Excellent</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">&gt; −80 dBm</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-subtle);">
+          <span>Good</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-secondary);">−80 to −90 dBm</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-subtle);">
+          <span>Fair</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">−90 to −100 dBm</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border-subtle);">
+          <span>Poor</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-warn);">−100 to −110 dBm</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:5px 0;">
+          <span>No Service</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-warn);">&lt; −120 dBm</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</div><!-- end max-width container -->
+
+<!-- Footer -->
+<footer style="background:rgba(0,0,0,0.4);border-top:1px solid var(--border-subtle);padding:36px 20px;text-align:center;margin-top:32px;">
+  <div style="max-width:700px;margin:0 auto;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.1em;margin-bottom:14px;">FURTHER READING</div>
+    <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+      <a href="https://www.3gpp.org/ftp/Specs/archive/36_series/36.101/" target="_blank" style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">3GPP TS 36.101</a>
+      <a href="https://www.3gpp.org/ftp/Specs/archive/38_series/38.901/" target="_blank" style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">3GPP TR 38.901</a>
+      <a href="https://www.itu.int/rec/R-REC-P.1546/en" target="_blank" style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);color:var(--c-primary);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">ITU-R P.1546</a>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-muted);">📡 Link Budget in a Nutshell · Engineer Reference · LTE / 5G NR / COST-231 / 3GPP TR 38.901</div>
+  </div>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
+    html.classList.toggle('dark', !isDark);
+    html.classList.toggle('light', isDark);
+    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+  }
+
+  function scrollToSec(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Scroll-reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.07 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // TOC active state
+  const sections = ['hero','s1','s2','s3','s4','s5','s6','s7','s8'];
+  const dots = document.querySelectorAll('.toc-dot');
+  const tocObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = sections.indexOf(e.target.id);
+        if (idx >= 0) dots.forEach((d,i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(id => { const el = document.getElementById(id); if (el) tocObs.observe(el); });
+
+  // Copy button
+  function copyBlock(btn) {
+    const block = btn.nextElementSibling;
+    navigator.clipboard.writeText(block.innerText.trim()).then(() => {
+      btn.textContent = 'copied!';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LTE in a Nutshell – Engineer's Quick Reference</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    darkMode: 'class',
+    theme: {
+      extend: {
+        colors: {
+          night: { 950: '#050a0f', 900: '#0a1520', 800: '#101f30', 700: '#162840' },
+        },
+        fontFamily: {
+          mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+          sans: ['Inter', 'system-ui', 'sans-serif'],
+        },
+      }
+    }
+  }
+</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;700&display=swap');
+
+  :root {
+    --bg-primary: #050a0f;
+    --bg-card: #0c1824;
+    --bg-card-hover: #101f2e;
+    --border-subtle: rgba(255,255,255,0.07);
+    --text-primary: #dde8f5;
+    --text-secondary: #7a90aa;
+    --text-muted: #445566;
+
+    /* LTE palette — steel blue, teal, amber */
+    --c-phy:   #38bdf8; /* Physical layer */
+    --c-mac:   #34d399; /* MAC/RLC/PDCP */
+    --c-rrc:   #a78bfa; /* RRC / control */
+    --c-kpi:   #fbbf24; /* KPI / perf */
+    --c-warn:  #f87171; /* warning / critical */
+    --c-proc:  #fb923c; /* procedures */
+    --c-chan:  #67e8f9;  /* channels */
+  }
+  .light {
+    --bg-primary: #edf2f8;
+    --bg-card: #ffffff;
+    --bg-card-hover: #f4f8ff;
+    --border-subtle: rgba(0,0,0,0.08);
+    --text-primary: #0f1e2e;
+    --text-secondary: #4a6070;
+    --text-muted: #9aaabb;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    line-height: 1.6;
+    transition: background 0.3s, color 0.3s;
+  }
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg-primary); }
+  ::-webkit-scrollbar-thumb { background: #1e3a52; border-radius: 10px; }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: 12px;
+    transition: all 0.25s ease;
+  }
+  .card:hover { background: var(--bg-card-hover); transform: translateY(-2px); }
+
+  .val-block {
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(56,189,248,0.15);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    color: var(--c-phy);
+  }
+
+  .badge {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+
+  .reveal { opacity: 0; transform: translateY(20px); transition: opacity 0.55s ease, transform 0.55s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  #toc-panel {
+    position: fixed; left: 18px; top: 50%; transform: translateY(-50%);
+    z-index: 50; display: flex; flex-direction: column; gap: 8px;
+  }
+  .toc-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--text-muted); cursor: pointer;
+    transition: all 0.2s; position: relative;
+  }
+  .toc-dot:hover, .toc-dot.active {
+    background: var(--c-phy); transform: scale(1.5);
+    box-shadow: 0 0 8px rgba(56,189,248,0.6);
+  }
+  .toc-dot::after {
+    content: attr(data-label); position: absolute; left: 18px; top: 50%;
+    transform: translateY(-50%); white-space: nowrap; font-size: 0.68rem;
+    color: var(--text-secondary); opacity: 0; pointer-events: none;
+    transition: opacity 0.2s; background: var(--bg-card);
+    padding: 2px 8px; border-radius: 4px; border: 1px solid var(--border-subtle); z-index: 10;
+  }
+  .toc-dot:hover::after { opacity: 1; }
+
+  #theme-btn {
+    position: fixed; top: 18px; right: 18px; z-index: 100;
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    color: var(--text-secondary); padding: 7px 14px; border-radius: 20px;
+    font-size: 0.73rem; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s;
+  }
+  #theme-btn:hover { border-color: var(--c-phy); color: var(--c-phy); }
+
+  .hero-grid {
+    background-image:
+      linear-gradient(rgba(56,189,248,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(56,189,248,0.04) 1px, transparent 1px);
+    background-size: 44px 44px;
+  }
+
+  .sec-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.63rem;
+    color: var(--text-muted); letter-spacing: 0.15em; text-transform: uppercase;
+  }
+
+  [data-tip] { position: relative; cursor: help; }
+  [data-tip]::after {
+    content: attr(data-tip); position: absolute; bottom: calc(100% + 6px);
+    left: 50%; transform: translateX(-50%); background: #0c1824;
+    color: #dde8f5; border: 1px solid rgba(56,189,248,0.25);
+    padding: 5px 10px; border-radius: 5px; font-size: 0.7rem;
+    white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity 0.2s; z-index: 100; font-family: 'Inter', sans-serif;
+  }
+  [data-tip]:hover::after { opacity: 1; }
+
+  .layer-row {
+    display: flex; align-items: stretch; border-radius: 8px; overflow: hidden;
+    border: 1px solid var(--border-subtle); margin-bottom: 6px;
+  }
+  .layer-label {
+    width: 90px; flex-shrink: 0; display: flex; align-items: center;
+    justify-content: center; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em;
+    padding: 10px 8px;
+  }
+  .layer-content {
+    flex: 1; padding: 10px 14px; display: flex; align-items: center; flex-wrap: wrap; gap: 6px;
+  }
+
+  .kpi-table th {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 10px 14px; text-align: left;
+  }
+  .kpi-table td { padding: 10px 14px; font-size: 0.84rem; }
+  .kpi-table tr { border-bottom: 1px solid var(--border-subtle); }
+  .kpi-table tr:last-child { border-bottom: none; }
+
+  .proc-step {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 0; border-bottom: 1px solid var(--border-subtle);
+  }
+  .proc-step:last-child { border-bottom: none; }
+  .step-num {
+    width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700;
+  }
+
+  @media (max-width: 768px) {
+    #toc-panel { display: none; }
+    #theme-btn { top: 10px; right: 10px; padding: 5px 10px; font-size: 0.68rem; }
+  }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+  @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.2; } }
+
+  .signal-bar { display: inline-block; width: 5px; border-radius: 2px; background: var(--c-phy); vertical-align: bottom; }
+</style>
+</head>
+<body>
+
+<button id="theme-btn" onclick="toggleTheme()">
+  <span id="theme-icon">☀️</span>
+  <span id="theme-label">Light</span>
+</button>
+
+<nav id="toc-panel" aria-label="Sections">
+  <div class="toc-dot active" data-label="Home" onclick="scrollTo('hero')"></div>
+  <div class="toc-dot" data-label="What is LTE?" onclick="scrollTo('s1')"></div>
+  <div class="toc-dot" data-label="Architecture" onclick="scrollTo('s2')"></div>
+  <div class="toc-dot" data-label="Air Interface" onclick="scrollTo('s3')"></div>
+  <div class="toc-dot" data-label="Protocol Stack" onclick="scrollTo('s4')"></div>
+  <div class="toc-dot" data-label="Key KPIs" onclick="scrollTo('s5')"></div>
+  <div class="toc-dot" data-label="Procedures" onclick="scrollTo('s6')"></div>
+  <div class="toc-dot" data-label="Channels" onclick="scrollTo('s7')"></div>
+  <div class="toc-dot" data-label="Quick Ref" onclick="scrollTo('s8')"></div>
+</nav>
+
+<!-- ═══════════════ HERO ═══════════════ -->
+<section id="hero" class="hero-grid min-h-screen flex flex-col items-center justify-center px-6 py-24 relative overflow-hidden">
+  <div style="position:absolute;top:8%;left:12%;width:500px;height:500px;background:radial-gradient(circle,rgba(56,189,248,0.06),transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:10%;right:8%;width:350px;height:350px;background:radial-gradient(circle,rgba(167,139,250,0.06),transparent 70%);pointer-events:none;"></div>
+
+  <div class="text-center max-w-3xl relative z-10 reveal">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.22);border-radius:20px;padding:4px 16px;margin-bottom:24px;">
+      <span style="width:6px;height:6px;background:var(--c-phy);border-radius:50%;animation:pulse 2s infinite;"></span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-phy);letter-spacing:0.1em;">3GPP RELEASE 8–15 · 4G STANDARD</span>
+    </div>
+
+    <h1 style="font-size:clamp(2.2rem,6vw,4rem);font-weight:800;line-height:1.1;letter-spacing:-0.02em;margin-bottom:16px;">
+      <span style="color:var(--text-primary);">LTE</span>
+      <span style="background:linear-gradient(135deg,#38bdf8,#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;"> in a Nutshell</span>
+      <br>
+      <span style="color:var(--text-primary);">Engineer's Quick Reference</span>
+    </h1>
+
+    <p style="font-size:1.05rem;color:var(--text-secondary);max-width:530px;margin:0 auto 32px;line-height:1.7;">
+      Architecture, air interface, protocol stack, KPIs, and procedures —
+      everything you need to understand <span style="color:var(--c-phy);font-family:'JetBrains Mono',monospace;">4G LTE</span> fast.
+    </p>
+
+    <div style="display:flex;justify-content:center;gap:28px;flex-wrap:wrap;margin-bottom:40px;">
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:700;color:var(--c-phy);">8</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Sections</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:700;color:var(--c-mac);">150</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Mbps DL peak</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:700;color:var(--c-rrc);">3GPP</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Rel-8 origin</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="font-family:'JetBrains Mono',monospace;font-size:1.7rem;font-weight:700;color:var(--c-kpi);">OFDMA</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.1em;">Air interface</div>
+      </div>
+    </div>
+
+    <button onclick="scrollTo('s1')" style="background:linear-gradient(135deg,#0369a1,#0ea5e9);color:#fff;border:none;padding:13px 34px;border-radius:10px;font-size:0.93rem;font-weight:600;cursor:pointer;letter-spacing:0.02em;box-shadow:0 0 28px rgba(56,189,248,0.3);transition:all 0.2s;" onmouseover="this.style.boxShadow='0 0 40px rgba(56,189,248,0.55)'" onmouseout="this.style.boxShadow='0 0 28px rgba(56,189,248,0.3)'">
+      Explore LTE ↓
+    </button>
+  </div>
+</section>
+
+<div style="max-width:960px;margin:0 auto;padding:0 20px;">
+
+<!-- ═══════════════ S1: WHAT IS LTE ═══════════════ -->
+<section id="s1" class="reveal" style="padding:80px 0 40px;">
+  <div class="sec-num">01 — OVERVIEW</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">What is LTE?</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+    <div class="card" style="padding:26px;border-left:3px solid var(--c-phy);">
+      <div style="font-size:0.68rem;color:var(--c-phy);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:10px;">DEFINITION</div>
+      <p style="font-size:0.92rem;line-height:1.7;"><strong>Long Term Evolution (LTE)</strong> is the 4G mobile broadband standard developed by 3GPP. It uses OFDMA on the downlink and SC-FDMA on the uplink to deliver high-speed packet data.</p>
+    </div>
+    <div class="card" style="padding:26px;border-left:3px solid var(--c-rrc);">
+      <div style="font-size:0.68rem;color:var(--c-rrc);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:10px;">KEY ADVANCEMENT</div>
+      <p style="font-size:0.92rem;line-height:1.7;">LTE is an <strong>all-IP, flat architecture</strong>. Voice (VoLTE) and data run over the same packet core. No circuit-switched domain — a major departure from UMTS/HSPA.</p>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;">
+    <div class="card" style="padding:18px;text-align:center;">
+      <div style="font-size:1.5rem;margin-bottom:8px;">📶</div>
+      <div style="font-weight:600;font-size:0.83rem;margin-bottom:4px;">DL Peak</div>
+      <div style="font-family:'JetBrains Mono',monospace;color:var(--c-phy);font-size:0.9rem;font-weight:700;">150 Mbps</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);">Cat-4, 2×2 MIMO</div>
+    </div>
+    <div class="card" style="padding:18px;text-align:center;">
+      <div style="font-size:1.5rem;margin-bottom:8px;">⬆️</div>
+      <div style="font-weight:600;font-size:0.83rem;margin-bottom:4px;">UL Peak</div>
+      <div style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);font-size:0.9rem;font-weight:700;">50 Mbps</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);">Cat-4, SC-FDMA</div>
+    </div>
+    <div class="card" style="padding:18px;text-align:center;">
+      <div style="font-size:1.5rem;margin-bottom:8px;">⏱️</div>
+      <div style="font-weight:600;font-size:0.83rem;margin-bottom:4px;">Latency</div>
+      <div style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);font-size:0.9rem;font-weight:700;">&lt; 10 ms</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);">User plane</div>
+    </div>
+    <div class="card" style="padding:18px;text-align:center;">
+      <div style="font-size:1.5rem;margin-bottom:8px;">📡</div>
+      <div style="font-weight:600;font-size:0.83rem;margin-bottom:4px;">Bandwidth</div>
+      <div style="font-family:'JetBrains Mono',monospace;color:var(--c-rrc);font-size:0.9rem;font-weight:700;">1.4–20 MHz</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);">6 options</div>
+    </div>
+  </div>
+
+  <!-- LTE-A note -->
+  <div class="card" style="padding:18px 22px;margin-top:16px;display:flex;gap:14px;align-items:flex-start;border-left:3px solid var(--c-kpi);">
+    <div style="font-size:1.3rem;flex-shrink:0;">⚡</div>
+    <div>
+      <div style="font-weight:600;font-size:0.88rem;margin-bottom:3px;">LTE-Advanced (Rel-10+)</div>
+      <div style="font-size:0.8rem;color:var(--text-secondary);">Carrier Aggregation (up to 5 CCs → 100 MHz), 8×8 MIMO DL, 4×4 MIMO UL, CoMP, eICIC for HetNet. Peak DL: 1 Gbps. LTE-A Pro (Rel-13+) adds LAA, eMTC, NB-IoT.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S2: ARCHITECTURE ═══════════════ -->
+<section id="s2" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">02 — ARCHITECTURE</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">System Architecture</h2>
+
+  <!-- EPS architecture blocks -->
+  <div class="card" style="padding:28px;margin-bottom:20px;overflow:hidden;position:relative;">
+    <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#38bdf8,#818cf8,#34d399);"></div>
+    <div style="font-size:0.68rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:18px;">EVOLVED PACKET SYSTEM (EPS)</div>
+
+    <div style="display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap;margin-bottom:16px;">
+
+      <!-- UE -->
+      <div style="text-align:center;padding:16px 18px;background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:8px;min-width:80px;">
+        <div style="font-size:1.4rem;">📱</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--c-phy);font-weight:700;margin-top:4px;">UE</div>
+        <div style="font-size:0.62rem;color:var(--text-muted);">User Equipment</div>
+      </div>
+
+      <!-- arrow + Uu -->
+      <div style="display:flex;flex-direction:column;align-items:center;padding:0 8px;">
+        <div style="font-size:0.6rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-bottom:2px;">Uu</div>
+        <div style="height:2px;width:50px;background:linear-gradient(90deg,rgba(56,189,248,0.3),rgba(56,189,248,0.8));"></div>
+        <div style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;">Air</div>
+      </div>
+
+      <!-- eNB -->
+      <div style="text-align:center;padding:16px 18px;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);border-radius:8px;min-width:80px;">
+        <div style="font-size:1.4rem;">🗼</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--c-rrc);font-weight:700;margin-top:4px;">eNB</div>
+        <div style="font-size:0.62rem;color:var(--text-muted);">eNodeB</div>
+      </div>
+
+      <!-- X2 + S1 -->
+      <div style="display:flex;flex-direction:column;align-items:center;padding:0 8px;">
+        <div style="font-size:0.6rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-bottom:2px;">S1-MME</div>
+        <div style="height:2px;width:50px;background:linear-gradient(90deg,rgba(167,139,250,0.4),rgba(167,139,250,0.8));"></div>
+        <div style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;">S1-U</div>
+      </div>
+
+      <!-- EPC box -->
+      <div style="background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.2);border-radius:8px;padding:16px 20px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
+        <div style="text-align:center;min-width:60px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--c-mac);font-weight:700;">MME</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);">Mobility Mgmt</div>
+        </div>
+        <div style="width:1px;background:var(--border-subtle);"></div>
+        <div style="text-align:center;min-width:60px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--c-mac);font-weight:700;">S-GW</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);">Serving GW</div>
+        </div>
+        <div style="width:1px;background:var(--border-subtle);"></div>
+        <div style="text-align:center;min-width:60px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--c-mac);font-weight:700;">P-GW</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);">PDN GW</div>
+        </div>
+        <div style="width:1px;background:var(--border-subtle);"></div>
+        <div style="text-align:center;min-width:60px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--c-mac);font-weight:700;">HSS</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);">Subscriber DB</div>
+        </div>
+        <div style="width:1px;background:var(--border-subtle);"></div>
+        <div style="text-align:center;min-width:60px;">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--c-mac);font-weight:700;">PCRF</div>
+          <div style="font-size:0.6rem;color:var(--text-muted);">Policy / QoS</div>
+        </div>
+      </div>
+
+      <!-- arrow + SGi -->
+      <div style="display:flex;flex-direction:column;align-items:center;padding:0 8px;">
+        <div style="font-size:0.6rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-bottom:2px;">SGi</div>
+        <div style="height:2px;width:50px;background:linear-gradient(90deg,rgba(52,211,153,0.4),rgba(52,211,153,0.8));"></div>
+        <div style="font-size:0.6rem;color:var(--text-muted);margin-top:2px;"></div>
+      </div>
+
+      <!-- Internet -->
+      <div style="text-align:center;padding:16px 18px;background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);border-radius:8px;min-width:80px;">
+        <div style="font-size:1.4rem;">🌐</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--c-mac);font-weight:700;margin-top:4px;">Internet</div>
+        <div style="font-size:0.62rem;color:var(--text-muted);">PDN</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px;">
+      <div style="background:rgba(56,189,248,0.05);border-radius:6px;padding:12px 14px;">
+        <div style="font-size:0.68rem;color:var(--c-phy);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">E-UTRAN (Radio Access)</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">eNBs connected via <strong>X2 interface</strong>. eNB handles scheduling, HARQ, RRC. No centralised BSC/RNC — intelligence pushed to the base station.</div>
+      </div>
+      <div style="background:rgba(52,211,153,0.05);border-radius:6px;padding:12px 14px;">
+        <div style="font-size:0.68rem;color:var(--c-mac);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">EPC (Core Network)</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">MME = control plane, S-GW = user plane anchor, P-GW = IP allocation + policy. HSS = subscriber database. PCRF = QoS rules.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S3: AIR INTERFACE ═══════════════ -->
+<section id="s3" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">03 — AIR INTERFACE</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">Air Interface Fundamentals</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px;">
+
+    <div class="card" style="padding:24px;border-left:3px solid var(--c-phy);">
+      <div style="font-size:0.68rem;color:var(--c-phy);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:14px;">DOWNLINK — OFDMA</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Orthogonal Frequency Division Multiple Access. Divides spectrum into narrow 15 kHz subcarriers, each independently modulated.</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;">Subcarrier spacing</span>
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);">15 kHz</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;">Resource Block</span>
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);">12 SC × 0.5 ms</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;">TTI</span>
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);">1 ms</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;">CP (Normal)</span>
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);">4.7 µs</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;border-left:3px solid var(--c-mac);">
+      <div style="font-size:0.68rem;color:var(--c-mac);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:14px;">UPLINK — SC-FDMA</div>
+      <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:12px;">Single Carrier FDMA. Lower PAPR than OFDMA — better power amplifier efficiency at the UE, extending battery life.</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;">Access scheme</span>
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);">SC-FDMA</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;">PAPR advantage</span>
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);">~5 dB vs OFDMA</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;">Sounding (SRS)</span>
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);">Last symbol/SF</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:0.78rem;">Power control</span>
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);">Open + Closed loop</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modulation table -->
+  <div class="card" style="padding:22px;">
+    <div style="font-size:0.68rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.1em;margin-bottom:14px;">MODULATION SCHEMES & SPECTRAL EFFICIENCY</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:collapse;">
+        <thead>
+          <tr style="background:rgba(56,189,248,0.06);border-bottom:2px solid rgba(56,189,248,0.15);">
+            <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-phy);letter-spacing:0.08em;">MODULATION</th>
+            <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-phy);letter-spacing:0.08em;">BITS/SYMBOL</th>
+            <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-phy);letter-spacing:0.08em;">SINR RANGE</th>
+            <th style="padding:10px 14px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--c-phy);letter-spacing:0.08em;">USE CASE</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid var(--border-subtle);">
+            <td style="padding:10px 14px;"><span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);">QPSK</span></td>
+            <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-mac);">2</td>
+            <td style="padding:10px 14px;font-size:0.8rem;color:var(--text-secondary);">&lt; 5 dB</td>
+            <td style="padding:10px 14px;font-size:0.78rem;color:var(--text-muted);">Cell edge, weak signal</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-subtle);background:rgba(255,255,255,0.01);">
+            <td style="padding:10px 14px;"><span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);">16-QAM</span></td>
+            <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-phy);">4</td>
+            <td style="padding:10px 14px;font-size:0.8rem;color:var(--text-secondary);">5–15 dB</td>
+            <td style="padding:10px 14px;font-size:0.78rem;color:var(--text-muted);">Mid-cell, typical users</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--border-subtle);">
+            <td style="padding:10px 14px;"><span class="badge" style="background:rgba(167,139,250,0.12);color:var(--c-rrc);">64-QAM</span></td>
+            <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-rrc);">6</td>
+            <td style="padding:10px 14px;font-size:0.8rem;color:var(--text-secondary);">15–25 dB</td>
+            <td style="padding:10px 14px;font-size:0.78rem;color:var(--text-muted);">Near cell, good SINR</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 14px;"><span class="badge" style="background:rgba(251,191,36,0.12);color:var(--c-kpi);">256-QAM</span></td>
+            <td style="padding:10px 14px;font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">8</td>
+            <td style="padding:10px 14px;font-size:0.8rem;color:var(--text-secondary);">&gt; 25 dB</td>
+            <td style="padding:10px 14px;font-size:0.78rem;color:var(--text-muted);">LTE-A Pro Rel-12+, high SINR</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S4: PROTOCOL STACK ═══════════════ -->
+<section id="s4" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">04 — PROTOCOL STACK</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">User Plane Protocol Stack</h2>
+
+  <div class="card" style="padding:26px;">
+    <div style="max-width:600px;margin:0 auto;">
+
+      <div class="layer-row" style="background:rgba(167,139,250,0.06);border-color:rgba(167,139,250,0.2);">
+        <div class="layer-label" style="background:rgba(167,139,250,0.12);color:var(--c-rrc);">RRC</div>
+        <div class="layer-content" style="font-size:0.78rem;color:var(--text-secondary);">
+          Radio Resource Control · Connection setup/release · Measurement reporting · Handover · Paging · System information (SIBs)
+        </div>
+      </div>
+
+      <div class="layer-row" style="background:rgba(103,232,249,0.04);border-color:rgba(103,232,249,0.15);">
+        <div class="layer-label" style="background:rgba(103,232,249,0.1);color:var(--c-chan);">PDCP</div>
+        <div class="layer-content" style="font-size:0.78rem;color:var(--text-secondary);">
+          Header compression (ROHC) · Ciphering & integrity protection · Reordering & duplicate detection · In-order delivery
+        </div>
+      </div>
+
+      <div class="layer-row" style="background:rgba(52,211,153,0.04);border-color:rgba(52,211,153,0.15);">
+        <div class="layer-label" style="background:rgba(52,211,153,0.1);color:var(--c-mac);">RLC</div>
+        <div class="layer-content" style="font-size:0.78rem;color:var(--text-secondary);">
+          Segmentation & reassembly · ARQ retransmission · Modes: TM / UM / AM · SDU/PDU management
+        </div>
+      </div>
+
+      <div class="layer-row" style="background:rgba(56,189,248,0.04);border-color:rgba(56,189,248,0.15);">
+        <div class="layer-label" style="background:rgba(56,189,248,0.1);color:var(--c-phy);">MAC</div>
+        <div class="layer-content" style="font-size:0.78rem;color:var(--text-secondary);">
+          Scheduling (DL/UL) · HARQ (8-process) · Priority handling · Multiplexing logical channels · Random access
+        </div>
+      </div>
+
+      <div class="layer-row" style="background:rgba(251,191,36,0.04);border-color:rgba(251,191,36,0.15);">
+        <div class="layer-label" style="background:rgba(251,191,36,0.1);color:var(--c-kpi);">PHY</div>
+        <div class="layer-content" style="font-size:0.78rem;color:var(--text-secondary);">
+          OFDMA / SC-FDMA modulation · CRC · Channel coding (Turbo) · MIMO · Beamforming · Resource mapping
+        </div>
+      </div>
+
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px;">
+      <div style="background:rgba(56,189,248,0.05);border-radius:6px;padding:12px 14px;">
+        <div style="font-size:0.68rem;color:var(--c-phy);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">HARQ</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">8 parallel stop-and-wait processes. Chase Combining or Incremental Redundancy. RTT = 8 ms.</div>
+      </div>
+      <div style="background:rgba(52,211,153,0.05);border-radius:6px;padding:12px 14px;">
+        <div style="font-size:0.68rem;color:var(--c-mac);font-family:'JetBrains Mono',monospace;margin-bottom:6px;">ARQ (RLC AM)</div>
+        <div style="font-size:0.78rem;color:var(--text-secondary);">Outer loop over HARQ. Window-based, handles residual errors. Status reports triggered on missing PDUs.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S5: KEY KPIs ═══════════════ -->
+<section id="s5" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">05 — PERFORMANCE</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">Key Performance Indicators</h2>
+
+  <div style="overflow-x:auto;margin-bottom:18px;">
+    <table class="kpi-table" style="width:100%;border-collapse:collapse;background:var(--bg-card);border-radius:12px;overflow:hidden;border:1px solid var(--border-subtle);">
+      <thead>
+        <tr style="background:rgba(251,191,36,0.06);border-bottom:2px solid rgba(251,191,36,0.18);">
+          <th style="color:var(--c-kpi);">KPI</th>
+          <th style="color:var(--c-kpi);">TARGET</th>
+          <th style="color:var(--c-kpi);">THRESHOLD</th>
+          <th style="color:var(--c-kpi);">FORMULA / NOTE</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>RRC Setup SR</strong></td>
+          <td><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&gt; 98%</span></td>
+          <td><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; 95%</span></td>
+          <td style="color:var(--text-muted);font-size:0.78rem;">RRC Setup Success / RRC Setup Attempts</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);">
+          <td><strong>E-RAB Setup SR</strong></td>
+          <td><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&gt; 98%</span></td>
+          <td><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; 95%</span></td>
+          <td style="color:var(--text-muted);font-size:0.78rem;">E-RAB Success / E-RAB Attempts</td>
+        </tr>
+        <tr>
+          <td><strong>Call Drop Rate</strong></td>
+          <td><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&lt; 0.5%</span></td>
+          <td><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 2%</span></td>
+          <td style="color:var(--text-muted);font-size:0.78rem;">Abnormal E-RAB Releases / Total E-RABs</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);">
+          <td><strong>HO Success Rate</strong></td>
+          <td><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&gt; 99%</span></td>
+          <td><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; 97%</span></td>
+          <td style="color:var(--text-muted);font-size:0.78rem;">HO Success / HO Attempts (intra/inter)</td>
+        </tr>
+        <tr>
+          <td><strong>DL Throughput</strong></td>
+          <td><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&gt; 30 Mbps</span></td>
+          <td><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; 10 Mbps</span></td>
+          <td style="color:var(--text-muted);font-size:0.78rem;">Avg cell DL throughput (busy hour)</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);">
+          <td><strong>RSRP</strong></td>
+          <td><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&gt; -100 dBm</span></td>
+          <td><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; -110 dBm</span></td>
+          <td style="color:var(--text-muted);font-size:0.78rem;">Reference Signal Received Power</td>
+        </tr>
+        <tr>
+          <td><strong>RSRQ</strong></td>
+          <td><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&gt; -10 dB</span></td>
+          <td><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&lt; -15 dB</span></td>
+          <td style="color:var(--text-muted);font-size:0.78rem;">(N × RSRP) / RSSI · N = RBs in meas. BW</td>
+        </tr>
+        <tr style="background:rgba(255,255,255,0.01);">
+          <td><strong>SINR / CQI</strong></td>
+          <td><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">CQI &gt; 9</span></td>
+          <td><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">CQI &lt; 6</span></td>
+          <td style="color:var(--text-muted);font-size:0.78rem;">UE reports 4-bit CQI (0–15) to eNB</td>
+        </tr>
+        <tr>
+          <td><strong>PRB Utilisation</strong></td>
+          <td><span style="color:var(--c-mac);font-family:'JetBrains Mono',monospace;">&lt; 70%</span></td>
+          <td><span style="color:var(--c-warn);font-family:'JetBrains Mono',monospace;">&gt; 85%</span></td>
+          <td style="color:var(--text-muted);font-size:0.78rem;">Used PRBs / Available PRBs × 100</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-phy);">
+      <div style="font-size:0.68rem;color:var(--c-phy);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">RSRP RANGES</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-mac);">Excellent</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">&gt; -80 dBm</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-kpi);">Good</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">-80 to -95 dBm</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-proc);">Fair</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-proc);">-95 to -105 dBm</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-warn);">Poor</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-warn);">&lt; -110 dBm</span></div>
+      </div>
+    </div>
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-kpi);">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:8px;">CQI → MODULATION MAPPING</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-mac);">CQI 1–6</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-mac);">QPSK (cell edge)</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-phy);">CQI 7–9</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-phy);">16-QAM (mid cell)</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--c-rrc);">CQI 10–15</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-rrc);">64-QAM (near cell)</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════ S6: PROCEDURES ═══════════════ -->
+<section id="s6" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">06 — PROCEDURES</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">Key Procedures</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-proc);">
+      <div style="font-size:0.68rem;color:var(--c-proc);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">INITIAL ATTACH</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(251,146,60,0.15);color:var(--c-proc);">1</div>
+        <div style="font-size:0.8rem;"><strong>RACH</strong> — Random Access (Msg1–4). UE sends preamble, eNB responds with RAR.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(251,146,60,0.15);color:var(--c-proc);">2</div>
+        <div style="font-size:0.8rem;"><strong>RRC Setup</strong> — eNB allocates resources, UE transitions to RRC_CONNECTED.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(251,146,60,0.15);color:var(--c-proc);">3</div>
+        <div style="font-size:0.8rem;"><strong>NAS Attach</strong> — MME authenticates UE via HSS (AKA), assigns GUTI.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(251,146,60,0.15);color:var(--c-proc);">4</div>
+        <div style="font-size:0.8rem;"><strong>Default Bearer</strong> — S-GW/P-GW allocate IP, E-RAB established end-to-end.</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;border-top:2px solid var(--c-rrc);">
+      <div style="font-size:0.68rem;color:var(--c-rrc);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">X2 HANDOVER (INTRA-LTE)</div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(167,139,250,0.12);color:var(--c-rrc);">1</div>
+        <div style="font-size:0.8rem;"><strong>A3 Event</strong> — UE reports neighbour RSRP/RSRQ exceeds serving + offset.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(167,139,250,0.12);color:var(--c-rrc);">2</div>
+        <div style="font-size:0.8rem;"><strong>HO Request</strong> — Source eNB sends HO Request to target via X2, resource check.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(167,139,250,0.12);color:var(--c-rrc);">3</div>
+        <div style="font-size:0.8rem;"><strong>RRC Reconfig</strong> — UE sent RRCConnectionReconfiguration with target cell info.</div>
+      </div>
+      <div class="proc-step">
+        <div class="step-num" style="background:rgba(167,139,250,0.12);color:var(--c-rrc);">4</div>
+        <div style="font-size:0.8rem;"><strong>Path Switch</strong> — MME/S-GW path updated. Source eNB releases UE context.</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════ S7: CHANNELS ═══════════════ -->
+<section id="s7" class="reveal" style="padding:60px 0 40px;">
+  <div class="sec-num">07 — CHANNELS</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">LTE Channel Structure</h2>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;">
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-phy);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">DOWNLINK CHANNELS</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);flex-shrink:0;">PDSCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Physical DL Shared Channel — user data</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);flex-shrink:0;">PDCCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">DL Control — DCI scheduling grants</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);flex-shrink:0;">PBCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Broadcast — MIB (every 40 ms)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);flex-shrink:0;">PCFICH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Control Format Indicator — 1–3 OFDM symbols</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);flex-shrink:0;">PHICH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">HARQ ACK/NACK for UL transmissions</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(56,189,248,0.12);color:var(--c-phy);flex-shrink:0;">RS / CSI-RS</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Reference signals for channel estimation</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:24px;">
+      <div style="font-size:0.68rem;color:var(--c-mac);font-family:'JetBrains Mono',monospace;margin-bottom:14px;">UPLINK CHANNELS</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);flex-shrink:0;">PUSCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Physical UL Shared Channel — user data</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);flex-shrink:0;">PUCCH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">UL Control — CQI, HARQ ACK, SR</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);flex-shrink:0;">PRACH</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Random Access preamble (Zadoff-Chu)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);flex-shrink:0;">DMRS</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Demodulation Reference Signal (UL)</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <span class="badge" style="background:rgba(52,211,153,0.12);color:var(--c-mac);flex-shrink:0;">SRS</span>
+          <span style="font-size:0.78rem;color:var(--text-secondary);">Sounding Reference Signal — UL channel quality</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ═══════════════ S8: QUICK REF ═══════════════ -->
+<section id="s8" class="reveal" style="padding:60px 0 80px;">
+  <div class="sec-num">08 — QUICK REFERENCE</div>
+  <h2 style="font-size:2rem;font-weight:700;margin:8px 0 28px;">Values & Parameters Cheatsheet</h2>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-phy);">
+      <div style="font-size:0.68rem;color:var(--c-phy);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">BANDWIDTH OPTIONS</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.8rem;">
+        <div style="display:flex;justify-content:space-between;"><span>1.4 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-phy);">6 RBs</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>3 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-phy);">15 RBs</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>5 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-phy);">25 RBs</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>10 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-phy);">50 RBs</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>15 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-phy);">75 RBs</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>20 MHz</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-phy);">100 RBs</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-rrc);">
+      <div style="font-size:0.68rem;color:var(--c-rrc);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">RRC STATES</div>
+      <div style="display:flex;flex-direction:column;gap:8px;font-size:0.8rem;">
+        <div><span class="badge" style="background:rgba(167,139,250,0.12);color:var(--c-rrc);">RRC_IDLE</span> — No data, paging monitored, DRX active</div>
+        <div><span class="badge" style="background:rgba(167,139,250,0.12);color:var(--c-rrc);">RRC_CONNECTED</span> — Active session, scheduled by eNB</div>
+        <div style="font-size:0.72rem;color:var(--text-muted);">Transition: IDLE → CONNECTED takes ~100 ms (RACH + RRC Setup)</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-kpi);">
+      <div style="font-size:0.68rem;color:var(--c-kpi);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">TIMING VALUES</div>
+      <div style="display:flex;flex-direction:column;gap:4px;font-size:0.8rem;">
+        <div style="display:flex;justify-content:space-between;"><span>TTI</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">1 ms</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Subframe</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">1 ms = 2 slots</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>Frame</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">10 ms = 10 SFs</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>HARQ RTT</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">8 ms</span></div>
+        <div style="display:flex;justify-content:space-between;"><span>SIB1 period</span><span style="font-family:'JetBrains Mono',monospace;color:var(--c-kpi);">80 ms</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-mac);">
+      <div style="font-size:0.68rem;color:var(--c-mac);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">MIMO MODES (DL)</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div><span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-mac);">TM1</span> Single antenna port</div>
+        <div><span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-mac);">TM2</span> Transmit diversity (SFBC)</div>
+        <div><span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-mac);">TM3</span> Open-loop spatial mux</div>
+        <div><span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-mac);">TM4</span> Closed-loop spatial mux</div>
+        <div><span class="badge" style="background:rgba(52,211,153,0.1);color:var(--c-mac);">TM7/8</span> Beamforming (UE-specific RS)</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-proc);">
+      <div style="font-size:0.68rem;color:var(--c-proc);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">HO EVENT TRIGGERS</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div><span class="badge" style="background:rgba(251,146,60,0.1);color:var(--c-proc);">A1</span> Serving becomes better than threshold</div>
+        <div><span class="badge" style="background:rgba(251,146,60,0.1);color:var(--c-proc);">A2</span> Serving becomes worse than threshold</div>
+        <div><span class="badge" style="background:rgba(251,146,60,0.1);color:var(--c-proc);">A3</span> Neighbour becomes offset better than serving</div>
+        <div><span class="badge" style="background:rgba(251,146,60,0.1);color:var(--c-proc);">A4</span> Neighbour becomes better than threshold</div>
+        <div><span class="badge" style="background:rgba(251,146,60,0.1);color:var(--c-proc);">A5</span> Serving &lt; thresh1 AND neighbour &gt; thresh2</div>
+      </div>
+    </div>
+
+    <div class="card" style="padding:20px;border-left:3px solid var(--c-warn);">
+      <div style="font-size:0.68rem;color:var(--c-warn);font-family:'JetBrains Mono',monospace;margin-bottom:10px;">COMMON FAILURE CAUSES</div>
+      <div style="display:flex;flex-direction:column;gap:5px;font-size:0.78rem;">
+        <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:var(--c-warn);">⚠</span><span>RACH failure → coverage gap or high load</span></div>
+        <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:var(--c-warn);">⚠</span><span>HO failure → too-late / too-early / wrong cell</span></div>
+        <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:var(--c-warn);">⚠</span><span>E-RAB drop → S1 link issue, S-GW overload</span></div>
+        <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:var(--c-warn);">⚠</span><span>Low SINR → pilot pollution, interference</span></div>
+        <div style="display:flex;gap:6px;align-items:flex-start;"><span style="color:var(--c-warn);">⚠</span><span>High CDR → overshooting, weak DL coverage</span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+</div><!-- /max-width -->
+
+<footer style="background:rgba(0,0,0,0.35);border-top:1px solid var(--border-subtle);padding:36px 20px;text-align:center;">
+  <div style="max-width:700px;margin:0 auto;">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:0.68rem;color:var(--text-muted);letter-spacing:0.1em;margin-bottom:14px;">FURTHER READING</div>
+    <div style="display:flex;justify-content:center;gap:14px;flex-wrap:wrap;margin-bottom:18px;">
+      <a href="https://www.3gpp.org/technologies/lte" target="_blank" style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);color:var(--c-phy);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">3GPP LTE Specs</a>
+      <a href="https://www.sharetechnote.com/html/LTE_Basic_Principle.html" target="_blank" style="background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.2);color:var(--c-mac);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">ShareTechNote</a>
+      <a href="https://www.rfwireless-world.com/Terminology/LTE-tutorial.html" target="_blank" style="background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.2);color:var(--c-rrc);padding:7px 18px;border-radius:6px;text-decoration:none;font-size:0.8rem;font-family:'JetBrains Mono',monospace;">RF Wireless World</a>
+    </div>
+    <div style="font-size:0.75rem;color:var(--text-muted);">🔖 LTE in a Nutshell · Engineer's Quick Reference · 3GPP Rel-8 to Rel-15</div>
+  </div>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.classList.contains('dark');
+    html.classList.toggle('dark', !isDark);
+    html.classList.toggle('light', isDark);
+    document.getElementById('theme-icon').textContent = isDark ? '🌙' : '☀️';
+    document.getElementById('theme-label').textContent = isDark ? 'Dark' : 'Light';
+  }
+
+  function scrollTo(id) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.07 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  const sections = ['hero','s1','s2','s3','s4','s5','s6','s7','s8'];
+  const dots = document.querySelectorAll('.toc-dot');
+  const tocObs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const idx = sections.indexOf(e.target.id);
+        dots.forEach((d,i) => d.classList.toggle('active', i === idx));
+      }
+    });
+  }, { threshold: 0.3 });
+  sections.forEach(id => { const el = document.getElementById(id); if (el) tocObs.observe(el); });
+</script>
+</body>
+</html>
